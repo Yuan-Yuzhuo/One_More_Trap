@@ -7,13 +7,21 @@ public class GroundTrigger : MonoBehaviour
     void Start()
     {
         ground = GetComponentInParent<RetractableGround>();
+
+        if (ground == null)
+        {
+            Debug.LogError("No RetractableGround script found on parent object!");
+        }
     }
 
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))
         {
-            ground.TriggerGround();
+            if (ground != null)
+            {
+                ground.TriggerGround();
+            }
         }
     }
 }

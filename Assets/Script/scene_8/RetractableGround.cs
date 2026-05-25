@@ -42,12 +42,12 @@ public class RetractableGround : MonoBehaviour
         isRunning = true;
 
         // 缩回到 1/5
-        yield return ChangeRatio(1f, 0.8f, shrinkTime);
+        yield return ChangeRatio(1f, 0.9f, shrinkTime);
 
         yield return new WaitForSeconds(stayTime);
 
         // 再伸回完整
-        yield return ChangeRatio(0.8f, 1f, extendTime);
+        yield return ChangeRatio(0.9f, 1f, extendTime);
 
         isRunning = false;
     }
