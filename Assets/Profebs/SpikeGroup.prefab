@@ -49,7 +49,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.8
+      value: 2.38012
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -57,7 +57,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.543749
+      value: 4.3338
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.z
@@ -91,9 +91,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1241572367490066010, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 7145198348311737387, guid: f73dfe034c22cfc41bd7e8799020a5ac, type: 3}
     - target: {fileID: 7205238123449680932, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_Name
       value: Spike
+      objectReference: {fileID: 0}
+    - target: {fileID: 7999906268414841896, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
+      propertyPath: m_SpriteTilingProperty.pivot.y
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 7999906268414841896, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_Points.m_Paths.Array.data[0].Array.data[0].x
@@ -194,7 +202,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.8
+      value: 2.3036895
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -202,7 +210,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.5437489
+      value: 4.2956
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.z
@@ -236,9 +244,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1241572367490066010, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 7145198348311737387, guid: f73dfe034c22cfc41bd7e8799020a5ac, type: 3}
     - target: {fileID: 7205238123449680932, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_Name
       value: Spike (3)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7999906268414841896, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
+      propertyPath: m_SpriteTilingProperty.pivot.y
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 7999906268414841896, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_Points.m_Paths.Array.data[0].Array.data[0].x
@@ -339,7 +355,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.8
+      value: 2.3429172
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -347,7 +363,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.5437489
+      value: 4.3153
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.z
@@ -381,9 +397,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1241572367490066010, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 7145198348311737387, guid: f73dfe034c22cfc41bd7e8799020a5ac, type: 3}
     - target: {fileID: 7205238123449680932, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_Name
       value: Spike (1)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7999906268414841896, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
+      propertyPath: m_SpriteTilingProperty.pivot.y
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 7999906268414841896, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_Points.m_Paths.Array.data[0].Array.data[0].x
@@ -484,7 +508,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalScale.y
-      value: 0.8
+      value: 2.3323681
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.x
@@ -492,7 +516,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.5437489
+      value: 4.3099
       objectReference: {fileID: 0}
     - target: {fileID: 712195565898248170, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_LocalPosition.z
@@ -526,9 +550,17 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1241572367490066010, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
+      propertyPath: m_Sprite
+      value: 
+      objectReference: {fileID: 7145198348311737387, guid: f73dfe034c22cfc41bd7e8799020a5ac, type: 3}
     - target: {fileID: 7205238123449680932, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_Name
       value: Spike (2)
+      objectReference: {fileID: 0}
+    - target: {fileID: 7999906268414841896, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
+      propertyPath: m_SpriteTilingProperty.pivot.y
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 7999906268414841896, guid: 35120fa9f7ea760458684958eb7eec6f, type: 3}
       propertyPath: m_Points.m_Paths.Array.data[0].Array.data[0].x
