@@ -143,7 +143,10 @@ public class PlayerController : MonoBehaviour
             float currentJumpForce = jumpForce;
 
             if (jumpCount == 1)
+            {
                 currentJumpForce = jumpForce * 0.6f;
+                GameStatsTracker.RegisterDoubleJumpUse();
+            }
 
             rb.velocity = new Vector2(rb.velocity.x, 0f);
 
@@ -514,12 +517,13 @@ public class PlayerController : MonoBehaviour
         rb.gravityScale = defaultGravityScale;
     }
 
-    void Die()
+    public void Die()
     {
         if (isDead)
             return;
 
         isDead = true;
+        GameStatsTracker.RegisterDeath();
 
         StartCoroutine(RestartAsync());
     }

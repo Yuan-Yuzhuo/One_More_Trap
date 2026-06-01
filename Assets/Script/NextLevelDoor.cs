@@ -9,7 +9,20 @@ public class NextLevelDoor : MonoBehaviour
     {
         if (collision.CompareTag("Player"))
         {
-            SceneManager.LoadScene(nextSceneIndex);
+            int targetSceneIndex = nextSceneIndex;
+
+            if (targetSceneIndex <= 0)
+            {
+                targetSceneIndex = SceneManager.GetActiveScene().buildIndex + 1;
+            }
+
+            if (targetSceneIndex >= SceneManager.sceneCountInBuildSettings)
+            {
+                GameStatsTracker.CompleteChallenge();
+                return;
+            }
+
+            SceneManager.LoadScene(targetSceneIndex);
         }
     }
 }
