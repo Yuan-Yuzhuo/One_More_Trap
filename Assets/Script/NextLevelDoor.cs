@@ -22,7 +22,7 @@ public class NextLevelDoor : MonoBehaviour
                 return;
             }
 
-            SceneManager.LoadScene(targetSceneIndex);
+            SceneTransitionController.LoadScene(targetSceneIndex);
         }
     }
 }

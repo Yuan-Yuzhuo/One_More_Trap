@@ -54,6 +54,16 @@ public class PlayerController : MonoBehaviour
 
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Animator animator;
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioSource runAudioSource;
+    [SerializeField] private AudioClip jumpClip;
+    [SerializeField] private AudioClip runClip;
+    [SerializeField] private AudioClip deathClip;
+    [SerializeField] private AudioClip dashClip;
+    [SerializeField] private float jumpVolume = 1.6f;
+    [SerializeField] private float runVolume = 0.7f;
+    [SerializeField] private float deathVolume = 1f;
+    [SerializeField] private float dashVolume = 1f;
 
     private int facingDir = 1;
     private Vector3 attackPointStartLocalPos;
@@ -79,6 +89,36 @@ public class PlayerController : MonoBehaviour
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
 
+        if (audioSource == null)
+            audioSource = GetComponent<AudioSource>();
+
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+
+        audioSource.playOnAwake = false;
+
+        if (runAudioSource == null)
+            runAudioSource = gameObject.AddComponent<AudioSource>();
+
+        runAudioSource.playOnAwake = false;
+        runAudioSource.loop = true;
+        runAudioSource.volume = runVolume;
+
+        if (jumpClip == null)
+            jumpClip = Resources.Load<AudioClip>("jump");
+
+        if (runClip == null)
+            runClip = Resources.Load<AudioClip>("run");
+
+        if (deathClip == null)
+            deathClip = Resources.Load<AudioClip>("death");
+
+        if (dashClip == null)
+            dashClip = Resources.Load<AudioClip>("whoosh");
+
+        if (runAudioSource.clip == null)
+            runAudioSource.clip = runClip;
+
         if (attackPoint != null)
             attackPointStartLocalPos = attackPoint.localPosition;
     }
@@ -91,12 +131,15 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        if (isDead)
+            return;
+
         if (dashCooldownTimer > 0f)
             dashCooldownTimer -= Time.deltaTime;
 
         UpdateInvincible();
 
-        float move = Input.GetAxisRaw("Horizontal");
+        float move = PlayerInputConfig.GetHorizontalMove();
 
         if (animator != null)
         {
@@ -106,6 +149,8 @@ public class PlayerController : MonoBehaviour
 
         if (Mathf.Abs(move) > 0.01f)
             SetFacing(move > 0 ? 1 : -1);
+
+        UpdateRunSound(move);
 
         // 移动
         if (!isDashing)
@@ -137,7 +182,7 @@ public class PlayerController : MonoBehaviour
 
         // 跳跃
         if (!isDashing &&
-            Input.GetKeyDown(KeyCode.W) &&
+            Input.GetKeyDown(PlayerInputConfig.JumpKey) &&
             (jumpCount < maxJumpCount || coyoteTimer > 0f))
         {
             float currentJumpForce = jumpForce;
@@ -158,12 +203,14 @@ public class PlayerController : MonoBehaviour
             if (animator != null)
                 animator.SetTrigger("Jump");
 
+            PlayJumpSound();
+
             jumpCount++;
             coyoteTimer = 0f;
         }
 
         // 小跳
-        if (Input.GetKeyUp(KeyCode.W) && rb.velocity.y > 0f)
+        if (Input.GetKeyUp(PlayerInputConfig.JumpKey) && rb.velocity.y > 0f)
         {
             rb.velocity = new Vector2(
                 rb.velocity.x,
@@ -174,7 +221,7 @@ public class PlayerController : MonoBehaviour
         // Dash
         if (!isDashing &&
             dashCooldownTimer <= 0f &&
-            Input.GetKeyDown(KeyCode.Space))
+            Input.GetKeyDown(PlayerInputConfig.DashKey))
         {
             if (isGrounded || canAirDash)
             {
@@ -343,7 +390,7 @@ public class PlayerController : MonoBehaviour
             currentSpacecraft = null;
 
             // 离开飞船时，不继承飞船速度
-            float move = Input.GetAxisRaw("Horizontal");
+            float move = PlayerInputConfig.GetHorizontalMove();
             rb.velocity = new Vector2(move * airMoveSpeed, rb.velocity.y);
         }
 
@@ -409,6 +456,37 @@ public class PlayerController : MonoBehaviour
                 c.a = 1f;
                 spriteRenderer.color = c;
             }
+        }
+    }
+
+    void PlayJumpSound()
+    {
+        if (audioSource == null || jumpClip == null)
+            return;
+
+        audioSource.PlayOneShot(jumpClip, jumpVolume);
+    }
+
+    void UpdateRunSound(float move)
+    {
+        if (runAudioSource == null || runClip == null)
+            return;
+
+        bool shouldPlay = Mathf.Abs(move) > 0.01f && isGrounded && !isDashing;
+
+        if (shouldPlay)
+        {
+            runAudioSource.volume = runVolume;
+
+            if (runAudioSource.clip != runClip)
+                runAudioSource.clip = runClip;
+
+            if (!runAudioSource.isPlaying)
+                runAudioSource.Play();
+        }
+        else if (runAudioSource.isPlaying)
+        {
+            runAudioSource.Stop();
         }
     }
 
@@ -509,12 +587,22 @@ public class PlayerController : MonoBehaviour
         {
             canAirDash = false;
         }
+
+        PlayDashSound();
     }
 
     void EndDash()
     {
         isDashing = false;
         rb.gravityScale = defaultGravityScale;
+    }
+
+    void PlayDashSound()
+    {
+        if (audioSource == null || dashClip == null)
+            return;
+
+        audioSource.PlayOneShot(dashClip, dashVolume);
     }
 
     public void Die()
@@ -525,22 +613,36 @@ public class PlayerController : MonoBehaviour
         isDead = true;
         GameStatsTracker.RegisterDeath();
 
+        if (runAudioSource != null && runAudioSource.isPlaying)
+            runAudioSource.Stop();
+
+        rb.velocity = Vector2.zero;
+        rb.gravityScale = defaultGravityScale;
+
+        PlayDeathSound();
+
         StartCoroutine(RestartAsync());
     }
 
     IEnumerator RestartAsync()
     {
-        yield return new WaitForSeconds(0.01f);
+        yield return null;
+        SceneTransitionController.LoadSceneWithoutSound(SceneManager.GetActiveScene().buildIndex);
+    }
 
-        AsyncOperation op =
-            SceneManager.LoadSceneAsync(
-                SceneManager.GetActiveScene().buildIndex
-            );
+    void PlayDeathSound()
+    {
+        if (deathClip == null)
+            return;
 
-        while (!op.isDone)
-        {
-            yield return null;
-        }
+        GameObject soundObject = new GameObject("DeathSound");
+        DontDestroyOnLoad(soundObject);
+
+        AudioSource deathAudioSource = soundObject.AddComponent<AudioSource>();
+        deathAudioSource.playOnAwake = false;
+        deathAudioSource.PlayOneShot(deathClip, deathVolume);
+
+        Destroy(soundObject, deathClip.length + 0.1f);
     }
 
     void OnDrawGizmosSelected()

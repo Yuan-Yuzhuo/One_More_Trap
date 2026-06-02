@@ -16,7 +16,8 @@ public class MainMenuController : MonoBehaviour
     {
         Login,
         Register,
-        Ranking
+        Ranking,
+        Configuration
     }
 
     private enum RankingView
@@ -28,10 +29,13 @@ public class MainMenuController : MonoBehaviour
 
     private MenuView currentView = MenuView.Login;
     private RankingView rankingView = RankingView.Deaths;
+    private PlayerInputAction? pendingInputAction = null;
 
     private string userName = "";
     private string password = "";
     private string message = "";
+    private bool showLoginErrorDialog = false;
+    private string loginErrorMessage = "";
 
     private GUIStyle titleStyle;
     private GUIStyle labelStyle;
@@ -42,7 +46,11 @@ public class MainMenuController : MonoBehaviour
     private GUIStyle tableAltCellStyle;
     private GUIStyle tableEmptyStyle;
     private GUIStyle closeButtonStyle;
+    private GUIStyle dialogBoxStyle;
+    private GUIStyle dialogTitleStyle;
+    private GUIStyle dialogTextStyle;
     private Texture2D panelTexture;
+    private Texture2D dialogTexture;
     private Texture2D tableHeaderTexture;
     private Texture2D tableRowTexture;
     private Texture2D tableAltRowTexture;
@@ -102,6 +110,11 @@ public class MainMenuController : MonoBehaviour
             Destroy(panelTexture);
         }
 
+        if (dialogTexture != null)
+        {
+            Destroy(dialogTexture);
+        }
+
         if (tableHeaderTexture != null)
         {
             Destroy(tableHeaderTexture);
@@ -125,10 +138,11 @@ public class MainMenuController : MonoBehaviour
 
         EnsureStyles();
         DrawBackground();
+        CapturePendingInputKey();
 
         float maxPanelWidth = currentView == MenuView.Ranking ? 760f : 520f;
         float panelWidth = Mathf.Min(maxPanelWidth, Screen.width - 32f);
-        float panelHeight = currentView == MenuView.Ranking ? 560f : 440f;
+        float panelHeight = currentView == MenuView.Ranking ? 560f : 500f;
         Rect panelRect = new Rect(
             (Screen.width - panelWidth) * 0.5f,
             Mathf.Max(20f, (Screen.height - panelHeight) * 0.5f),
@@ -138,7 +152,7 @@ public class MainMenuController : MonoBehaviour
 
         GUI.Box(panelRect, GUIContent.none, panelStyle);
 
-        if (currentView == MenuView.Ranking)
+        if (currentView == MenuView.Ranking || currentView == MenuView.Configuration)
         {
             Rect closeRect = new Rect(panelRect.xMax - 48f, panelRect.y + 14f, 34f, 34f);
             if (GUI.Button(closeRect, "X", closeButtonStyle))
@@ -146,6 +160,8 @@ public class MainMenuController : MonoBehaviour
                 PlayClickSound();
                 currentView = MenuView.Login;
                 message = "";
+                pendingInputAction = null;
+                CloseLoginErrorDialog();
             }
         }
 
@@ -161,12 +177,21 @@ public class MainMenuController : MonoBehaviour
         {
             DrawRegister();
         }
-        else
+        else if (currentView == MenuView.Ranking)
         {
             DrawRanking();
         }
+        else
+        {
+            DrawConfiguration();
+        }
 
         GUILayout.EndArea();
+
+        if (showLoginErrorDialog)
+        {
+            DrawLoginErrorDialog();
+        }
     }
 
     private void DrawLogin()
@@ -181,15 +206,25 @@ public class MainMenuController : MonoBehaviour
 
             LoginResult result = LocalGameDatabase.Login(userName, password);
             message = GetLoginMessage(result);
+
+            if (result == LoginResult.Success)
+            {
+                showLoginErrorDialog = false;
+                loginErrorMessage = "";
+            }
+            else
+            {
+                loginErrorMessage = message;
+                showLoginErrorDialog = true;
+            }
         }
 
         GUI.enabled = LocalGameDatabase.IsLoggedIn;
-        if (GUILayout.Button("Register Account", GUILayout.Height(34f)))
+        if (GUILayout.Button("Start Challenge", GUILayout.Height(34f)))
         {
             PlayClickSound();
-
-            currentView = MenuView.Register;
-            message = "";
+            GameStatsTracker.StartChallenge();
+            SceneTransitionController.LoadScene(FirstChallengeSceneIndex);
         }
         GUI.enabled = true;
 
@@ -200,6 +235,7 @@ public class MainMenuController : MonoBehaviour
             PlayClickSound();
             currentView = MenuView.Register;
             message = "";
+            CloseLoginErrorDialog();
         }
 
         if (GUILayout.Button("View Rankings", GUILayout.Height(34f)))
@@ -208,6 +244,18 @@ public class MainMenuController : MonoBehaviour
 
             currentView = MenuView.Ranking;
             message = "";
+            pendingInputAction = null;
+            CloseLoginErrorDialog();
+        }
+
+        if (GUILayout.Button("Personalized Configuration", GUILayout.Height(34f)))
+        {
+            PlayClickSound();
+
+            currentView = MenuView.Configuration;
+            message = "";
+            pendingInputAction = null;
+            CloseLoginErrorDialog();
         }
 
         GUILayout.Space(10f);
@@ -239,6 +287,7 @@ public class MainMenuController : MonoBehaviour
 
             currentView = MenuView.Login;
             message = "";
+            CloseLoginErrorDialog();
         }
 
         GUILayout.Space(10f);
@@ -281,6 +330,64 @@ public class MainMenuController : MonoBehaviour
         DrawRankingRows();
     }
 
+    private void DrawConfiguration()
+    {
+        GUILayout.Label("Personalized Configuration", labelStyle);
+        GUILayout.Space(12f);
+
+        DrawInputBindingRow(PlayerInputAction.MoveLeft);
+        DrawInputBindingRow(PlayerInputAction.MoveRight);
+        DrawInputBindingRow(PlayerInputAction.Jump);
+        DrawInputBindingRow(PlayerInputAction.Dash);
+
+        GUILayout.Space(14f);
+
+        if (pendingInputAction.HasValue)
+        {
+            GUILayout.Label("Press any key for " + PlayerInputConfig.GetActionLabel(pendingInputAction.Value), messageStyle);
+        }
+        else
+        {
+            GUILayout.Label("Click an action, then press the key you want to use.", labelStyle);
+        }
+
+        GUILayout.Space(12f);
+
+        if (GUILayout.Button("Reset Defaults", GUILayout.Height(34f)))
+        {
+            PlayClickSound();
+            PlayerInputConfig.ResetDefaults();
+            pendingInputAction = null;
+        }
+
+        if (GUILayout.Button("Back To Login", GUILayout.Height(34f)))
+        {
+            PlayClickSound();
+            currentView = MenuView.Login;
+            pendingInputAction = null;
+            message = "";
+        }
+    }
+
+    private void DrawInputBindingRow(PlayerInputAction action)
+    {
+        GUILayout.BeginHorizontal();
+        GUILayout.Label(PlayerInputConfig.GetActionLabel(action), labelStyle, GUILayout.Width(160f), GUILayout.Height(34f));
+
+        string buttonText = pendingInputAction.HasValue && pendingInputAction.Value == action
+            ? "Press a key..."
+            : PlayerInputConfig.GetKey(action).ToString();
+
+        if (GUILayout.Button(buttonText, GUILayout.Height(34f)))
+        {
+            PlayClickSound();
+            pendingInputAction = action;
+        }
+
+        GUILayout.EndHorizontal();
+        GUILayout.Space(6f);
+    }
+
     private void DrawAccountFields()
     {
         GUILayout.Label("User Name", labelStyle);
@@ -290,6 +397,31 @@ public class MainMenuController : MonoBehaviour
 
         GUILayout.Label("Password", labelStyle);
         password = GUILayout.PasswordField(password, '*', GUILayout.Height(32f));
+    }
+
+    private void CapturePendingInputKey()
+    {
+        if (!pendingInputAction.HasValue)
+        {
+            return;
+        }
+
+        KeyCode key;
+        if (!PlayerInputConfig.TryGetPressedKey(Event.current, out key))
+        {
+            return;
+        }
+
+        if (key == KeyCode.Escape)
+        {
+            pendingInputAction = null;
+            Event.current.Use();
+            return;
+        }
+
+        PlayerInputConfig.SetKey(pendingInputAction.Value, key);
+        pendingInputAction = null;
+        Event.current.Use();
     }
 
     private void DrawStatus()
@@ -303,6 +435,32 @@ public class MainMenuController : MonoBehaviour
         if (!string.IsNullOrEmpty(message))
         {
             GUILayout.Label(message, messageStyle);
+        }
+    }
+
+    private void CloseLoginErrorDialog()
+    {
+        showLoginErrorDialog = false;
+        loginErrorMessage = "";
+    }
+
+    private void DrawLoginErrorDialog()
+    {
+        Rect dialogRect = new Rect(
+            (Screen.width - 360f) * 0.5f,
+            (Screen.height - 170f) * 0.5f,
+            360f,
+            170f
+        );
+
+        GUI.Box(dialogRect, GUIContent.none, dialogBoxStyle);
+        GUI.Label(new Rect(dialogRect.x + 20f, dialogRect.y + 18f, dialogRect.width - 40f, 32f), "Login Failed", dialogTitleStyle);
+        GUI.Label(new Rect(dialogRect.x + 28f, dialogRect.y + 62f, dialogRect.width - 56f, 42f), loginErrorMessage, dialogTextStyle);
+
+        if (GUI.Button(new Rect(dialogRect.x + 120f, dialogRect.y + 118f, 120f, 34f), "OK"))
+        {
+            PlayClickSound();
+            CloseLoginErrorDialog();
         }
     }
 
@@ -386,6 +544,7 @@ public class MainMenuController : MonoBehaviour
         }
 
         panelTexture = CreateTexture(new Color(1f, 0.97f, 0.84f, 0.78f));
+        dialogTexture = CreateTexture(new Color(0.08f, 0.09f, 0.08f, 0.9f));
         tableHeaderTexture = CreateTexture(new Color(0.25f, 0.34f, 0.26f, 0.86f));
         tableRowTexture = CreateTexture(new Color(1f, 1f, 1f, 0.62f));
         tableAltRowTexture = CreateTexture(new Color(0.92f, 0.98f, 0.88f, 0.62f));
@@ -432,6 +591,21 @@ public class MainMenuController : MonoBehaviour
         closeButtonStyle.fontSize = 18;
         closeButtonStyle.fontStyle = FontStyle.Bold;
         closeButtonStyle.normal.textColor = new Color(0.13f, 0.16f, 0.12f);
+
+        dialogBoxStyle = new GUIStyle(GUI.skin.box);
+        dialogBoxStyle.normal.background = dialogTexture;
+
+        dialogTitleStyle = new GUIStyle(GUI.skin.label);
+        dialogTitleStyle.fontSize = 22;
+        dialogTitleStyle.fontStyle = FontStyle.Bold;
+        dialogTitleStyle.alignment = TextAnchor.MiddleCenter;
+        dialogTitleStyle.normal.textColor = Color.white;
+
+        dialogTextStyle = new GUIStyle(GUI.skin.label);
+        dialogTextStyle.fontSize = 16;
+        dialogTextStyle.alignment = TextAnchor.MiddleCenter;
+        dialogTextStyle.wordWrap = true;
+        dialogTextStyle.normal.textColor = Color.white;
     }
 
     private static Texture2D CreateTexture(Color color)

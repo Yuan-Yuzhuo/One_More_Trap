@@ -191,7 +191,7 @@ public class GameStatsTracker : MonoBehaviour
 
         if (!LocalGameDatabase.IsLoggedIn)
         {
-            SceneManager.LoadScene(MainMenuSceneName);
+            SceneTransitionController.LoadScene(MainMenuSceneName);
             return;
         }
 
@@ -371,7 +371,7 @@ public class GameStatsTracker : MonoBehaviour
             showSaveRecordConfirm = false;
             pendingRecord = null;
             ResumeAfterDialog();
-            SceneManager.LoadScene(MainMenuSceneName);
+            SceneTransitionController.LoadScene(MainMenuSceneName);
         }
     }
 
@@ -397,7 +397,7 @@ public class GameStatsTracker : MonoBehaviour
             pendingRecord = null;
             showSaveRecordConfirm = false;
             ResumeAfterDialog();
-            SceneManager.LoadScene(MainMenuSceneName);
+            SceneTransitionController.LoadScene(MainMenuSceneName);
         }
 
         if (GUI.Button(new Rect(dialogRect.x + dialogRect.width - 214f, dialogRect.y + 146f, 140f, 34f), "Save Record"))
@@ -410,7 +410,7 @@ public class GameStatsTracker : MonoBehaviour
             pendingRecord = null;
             showSaveRecordConfirm = false;
             ResumeAfterDialog();
-            SceneManager.LoadScene(MainMenuSceneName);
+            SceneTransitionController.LoadScene(MainMenuSceneName);
         }
     }
 

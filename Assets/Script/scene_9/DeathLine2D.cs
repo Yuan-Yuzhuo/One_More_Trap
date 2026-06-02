@@ -1,5 +1,4 @@
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class DeathLine2D : MonoBehaviour
 {
@@ -7,11 +6,10 @@ public class DeathLine2D : MonoBehaviour
     {
         if (!other.CompareTag("Player")) return;
 
-        // 重开当前场景
-        GameStatsTracker.RegisterDeath();
-
-        SceneManager.LoadScene(
-            SceneManager.GetActiveScene().buildIndex
-        );
+        PlayerController player = other.GetComponent<PlayerController>();
+        if (player != null)
+        {
+            player.Die();
+        }
     }
 }
