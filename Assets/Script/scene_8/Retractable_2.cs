@@ -4,10 +4,6 @@ using UnityEngine;
 public class Retractable_2 : MonoBehaviour
 {
     public float shrinkTime = 0.5f;
-
-    // 缩到剩多少
-    // 0.8 = 保留 80%
-    // 0.2 = 保留 20%
     public float targetRatio = 0.8f;
 
     private bool isRunning = false;
@@ -24,14 +20,12 @@ public class Retractable_2 : MonoBehaviour
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         originalWidth = sr.bounds.size.x;
-
-        // 记录地板左边位置
         leftX = originalPosition.x - originalWidth / 2f;
 
-        // 初始完整显示
         SetGroundRatio(1f);
     }
 
+    // Starts the one-way shrink animation if it is not already running.
     public void TriggerGround()
     {
         if (!isRunning)
@@ -40,14 +34,14 @@ public class Retractable_2 : MonoBehaviour
         }
     }
 
+    // Shrinks the platform to the configured final width.
     IEnumerator ShrinkOnly()
     {
         isRunning = true;
-
-        // 从右往左缩
         yield return ChangeRatio(1f, targetRatio, shrinkTime);
     }
 
+    // Interpolates the visible platform width between two ratios.
     IEnumerator ChangeRatio(float from, float to, float time)
     {
         float timer = 0f;
@@ -57,7 +51,6 @@ public class Retractable_2 : MonoBehaviour
             timer += Time.deltaTime;
 
             float t = timer / time;
-
             float ratio = Mathf.Lerp(from, to, t);
 
             SetGroundRatio(ratio);
@@ -68,16 +61,15 @@ public class Retractable_2 : MonoBehaviour
         SetGroundRatio(to);
     }
 
+    // Resizes the platform while keeping its left edge fixed.
     void SetGroundRatio(float ratio)
     {
-        // 缩放 X
         transform.localScale = new Vector3(
             originalScale.x * ratio,
             originalScale.y,
             originalScale.z
         );
 
-        // 保持左边固定
         float currentWidth = originalWidth * ratio;
 
         transform.position = new Vector3(

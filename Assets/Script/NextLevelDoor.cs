@@ -3,8 +3,9 @@ using UnityEngine.SceneManagement;
 
 public class NextLevelDoor : MonoBehaviour
 {
-    public int nextSceneIndex; // 下一关编号
+    public int nextSceneIndex;
 
+    // Sends the player to the configured scene, or to the next build scene by default.
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.CompareTag("Player"))

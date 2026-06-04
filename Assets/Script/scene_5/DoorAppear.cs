@@ -11,6 +11,7 @@ public class DoorAppear : MonoBehaviour
         StartCoroutine(Appear());
     }
 
+    // Reveals the linked door after a delay.
     IEnumerator Appear()
     {
         yield return new WaitForSeconds(delay);

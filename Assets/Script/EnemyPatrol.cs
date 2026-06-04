@@ -22,12 +22,8 @@ public class EnemyPatrol : MonoBehaviour
     private Animator animator;
 
     private float attackTimer = 0f;
-
-    // 受击状态
     private bool isHurt = false;
     private float hurtTimer = 0f;
-
-    // 边缘检测（防抖）
     private bool hasGroundAhead = true;
 
     public Transform groundCheck;
@@ -47,15 +43,14 @@ public class EnemyPatrol : MonoBehaviour
         animator = GetComponent<Animator>();
     }
 
+    // Handles patrol, chase, attack cooldown, hurt stun, and edge detection each frame.
     void Update()
     {
-        // 攻击冷却
         if (attackTimer > 0f)
         {
             attackTimer -= Time.deltaTime;
         }
 
-        // 受击硬直
         if (isHurt)
         {
             hurtTimer -= Time.deltaTime;
@@ -65,12 +60,11 @@ public class EnemyPatrol : MonoBehaviour
                 isHurt = false;
             }
 
-            return; // ❗关键：阻止移动逻辑
+            return;
         }
 
         float moveSpeed = speed;
 
-        // 玩家检测
         Collider2D playerHit = Physics2D.OverlapCircle(transform.position, chaseRange, playerLayer);
         if (playerHit != null)
         {
@@ -85,7 +79,6 @@ public class EnemyPatrol : MonoBehaviour
             }
         }
 
-        // 移动
         if (rb != null)
         {
             rb.velocity = new Vector2(direction * moveSpeed, rb.velocity.y);
@@ -95,7 +88,6 @@ public class EnemyPatrol : MonoBehaviour
             transform.Translate(Vector2.right * direction * moveSpeed * Time.deltaTime);
         }
 
-        // 边缘检测（防抖）
         if (groundCheck != null)
         {
             RaycastHit2D hit = Physics2D.Raycast(
@@ -117,9 +109,10 @@ public class EnemyPatrol : MonoBehaviour
         }
     }
 
+    // Reverses facing and movement direction unless the enemy is in hurt stun.
     void Flip()
     {
-        if (isHurt) return; // 防止击退时乱翻
+        if (isHurt) return;
 
         direction *= -1;
 
@@ -128,9 +121,9 @@ public class EnemyPatrol : MonoBehaviour
         transform.localScale = scale;
     }
 
+    // Flips patrol direction when hitting another enemy or a wall-like ground object.
     private void OnCollisionEnter2D(Collision2D collision)
     {
-        // 只对 Enemy 和 Ground 反向
         if (collision.gameObject.CompareTag("Enemy") ||
             collision.gameObject.CompareTag("Ground"))
         {
@@ -138,6 +131,7 @@ public class EnemyPatrol : MonoBehaviour
         }
     }
 
+    // Applies damage, knockback, hit feedback, and destruction when health is depleted.
     public void TakeDamage(int amount, Vector2 knockback)
     {
         currentHealth -= amount;
@@ -167,6 +161,7 @@ public class EnemyPatrol : MonoBehaviour
         }
     }
 
+    // Plays the enemy attack animation and optional attack visual effect.
     void TriggerAttackFx()
     {
         if (animator != null)
@@ -187,6 +182,7 @@ public class EnemyPatrol : MonoBehaviour
         }
     }
 
+    // Temporarily flashes the sprite red after taking damage.
     private IEnumerator HurtFlash()
     {
         Color originalColor = spriteRenderer.color;
@@ -195,6 +191,7 @@ public class EnemyPatrol : MonoBehaviour
         spriteRenderer.color = originalColor;
     }
 
+    // Draws the edge-check ray in the editor for patrol tuning.
     void OnDrawGizmos()
     {
         if (groundCheck != null)
@@ -207,6 +204,7 @@ public class EnemyPatrol : MonoBehaviour
         }
     }
 
+    // Draws chase and attack ranges in the editor.
     void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;

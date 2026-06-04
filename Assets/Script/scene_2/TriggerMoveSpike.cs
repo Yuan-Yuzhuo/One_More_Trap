@@ -9,17 +9,17 @@ public class TriggerMoveSpike : MonoBehaviour
     private Vector3 targetPosition;
     private bool triggered = false;
 
+    // Sets the spike target position when the player enters the trigger.
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (!triggered && collision.CompareTag("Player"))
         {
             triggered = true;
-
-            // 👉 固定向前移动一段距离（X轴）
             targetPosition = spike.position + new Vector3(moveDistance, 0, 0);
         }
     }
 
+    // Moves the spike toward its triggered target position.
     void Update()
     {
         if (triggered)

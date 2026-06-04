@@ -33,6 +33,7 @@ public static class PlayerInputConfig
         get { return GetKey(PlayerInputAction.Dash); }
     }
 
+    // Returns the saved key for an action, falling back to its default key.
     public static KeyCode GetKey(PlayerInputAction action)
     {
         string saved = PlayerPrefs.GetString(GetPrefKey(action), "");
@@ -46,12 +47,14 @@ public static class PlayerInputConfig
         return GetDefaultKey(action);
     }
 
+    // Saves a new key binding for the given action.
     public static void SetKey(PlayerInputAction action, KeyCode key)
     {
         PlayerPrefs.SetString(GetPrefKey(action), key.ToString());
         PlayerPrefs.Save();
     }
 
+    // Clears saved bindings so the default controls are used again.
     public static void ResetDefaults()
     {
         PlayerPrefs.DeleteKey(GetPrefKey(PlayerInputAction.MoveLeft));
@@ -61,6 +64,7 @@ public static class PlayerInputConfig
         PlayerPrefs.Save();
     }
 
+    // Converts the configured left and right keys into a horizontal movement value.
     public static float GetHorizontalMove()
     {
         float move = 0f;
@@ -78,6 +82,7 @@ public static class PlayerInputConfig
         return Mathf.Clamp(move, -1f, 1f);
     }
 
+    // Reads a key press from the current IMGUI event during configuration.
     public static bool TryGetPressedKey(Event currentEvent, out KeyCode key)
     {
         key = KeyCode.None;
@@ -96,6 +101,7 @@ public static class PlayerInputConfig
         return true;
     }
 
+    // Returns the player-facing label for an input action.
     public static string GetActionLabel(PlayerInputAction action)
     {
         if (action == PlayerInputAction.MoveLeft)

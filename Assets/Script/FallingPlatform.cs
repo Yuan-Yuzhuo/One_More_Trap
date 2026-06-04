@@ -3,11 +3,11 @@ using System.Collections;
 
 public class FallingPlatform : MonoBehaviour
 {
-    public float delay = 0.05f;        // 稍微给点反应时间
+    public float delay = 0.05f;
     public float destroyTime = 0.5f;
 
-    public float fallSpeed = 12f;       // 初始下落速度（关键）
-    public float gravityScale = 85f;    // 重力加速（关键）
+    public float fallSpeed = 12f;
+    public float gravityScale = 85f;
 
     private bool isTriggered = false;
     private Rigidbody2D rb;
@@ -17,6 +17,7 @@ public class FallingPlatform : MonoBehaviour
         rb = GetComponent<Rigidbody2D>();
     }
 
+    // Starts the fall sequence when the player enters the platform trigger.
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (isTriggered) return;
@@ -28,11 +29,11 @@ public class FallingPlatform : MonoBehaviour
         }
     }
 
+    // Gives the player a short warning shake, then turns the platform into a falling body.
     IEnumerator Fall()
     {
         yield return new WaitForSeconds(delay);
 
-        // 抖动提示（可以减少次数让节奏更快）
         for (int i = 0; i < 3; i++)
         {
             transform.position += Vector3.right * 0.03f;
@@ -41,11 +42,8 @@ public class FallingPlatform : MonoBehaviour
             yield return new WaitForSeconds(0.01f);
         }
 
-        // 开始掉落（关键）
         rb.bodyType = RigidbodyType2D.Dynamic;
         rb.gravityScale = gravityScale;
-
-        // 给一个向下初速度（核心手感）
         rb.velocity = new Vector2(0f, -fallSpeed);
 
         Destroy(gameObject, destroyTime);

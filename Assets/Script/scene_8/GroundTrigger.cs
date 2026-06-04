@@ -14,6 +14,7 @@ public class GroundTrigger : MonoBehaviour
         }
     }
 
+    // Triggers the parent retractable ground when the player enters this trigger.
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))

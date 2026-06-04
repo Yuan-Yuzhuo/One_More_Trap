@@ -3,13 +3,14 @@ using System.Collections;
 
 public class DropTrap : MonoBehaviour
 {
-    public Rigidbody2D spikeRb;   // 掉落物
-    public float delay = 0.2f;    // 触发延迟
-    public float fallSpeed = 15f; // 初始下落速度
+    public Rigidbody2D spikeRb;
+    public float delay = 0.2f;
+    public float fallSpeed = 15f;
     public float gravityScale = 8f;
 
     private bool isTriggered = false;
 
+    // Starts the trap drop when the player enters the trigger.
     private void OnTriggerEnter2D(Collider2D collision)
     {
         if (isTriggered) return;
@@ -21,16 +22,13 @@ public class DropTrap : MonoBehaviour
         }
     }
 
+    // Delays briefly, then turns the spike into a falling rigidbody.
     IEnumerator Drop()
     {
-        // 预警（可以加抖动）
         yield return new WaitForSeconds(delay);
 
-        // 开始掉落
         spikeRb.bodyType = RigidbodyType2D.Dynamic;
         spikeRb.gravityScale = gravityScale;
-
-        // 给一个向下初速度（关键）
         spikeRb.velocity = new Vector2(0f, -fallSpeed);
     }
 }

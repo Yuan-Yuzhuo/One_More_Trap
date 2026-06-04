@@ -16,6 +16,7 @@ public class SceneTransitionController : MonoBehaviour
     private float fadeAlpha;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    // Creates the persistent transition controller before any scene loads.
     private static void Bootstrap()
     {
         EnsureInstance();
@@ -39,6 +40,7 @@ public class SceneTransitionController : MonoBehaviour
         instance.StartTransition(sceneIndex, false);
     }
 
+    // Ensures there is exactly one transition controller across scenes.
     private static void EnsureInstance()
     {
         if (instance != null)
@@ -64,6 +66,7 @@ public class SceneTransitionController : MonoBehaviour
         transitionClip = Resources.Load<AudioClip>(TransitionClipResourceName);
     }
 
+    // Begins a fade transition to a scene by build index.
     private void StartTransition(int sceneIndex, bool playSound)
     {
         if (isTransitioning)
@@ -76,6 +79,7 @@ public class SceneTransitionController : MonoBehaviour
         StartCoroutine(TransitionRoutine(loadOperation, playSound));
     }
 
+    // Begins a fade transition to a scene by name.
     private void StartTransition(string sceneName, bool playSound)
     {
         if (isTransitioning)
@@ -88,6 +92,7 @@ public class SceneTransitionController : MonoBehaviour
         StartCoroutine(TransitionRoutine(loadOperation, playSound));
     }
 
+    // Fades to black, activates the loaded scene, then fades back in.
     private IEnumerator TransitionRoutine(AsyncOperation loadOperation, bool playSound)
     {
         isTransitioning = true;
@@ -114,6 +119,7 @@ public class SceneTransitionController : MonoBehaviour
         isTransitioning = false;
     }
 
+    // Animates the full-screen black overlay alpha.
     private IEnumerator FadeOverlay(float from, float to)
     {
         float duration = Mathf.Max(0.01f, fadeDuration);
@@ -129,6 +135,7 @@ public class SceneTransitionController : MonoBehaviour
         fadeAlpha = to;
     }
 
+    // Plays scene-transition audio from a temporary object that survives scene activation.
     private void PlayTransitionSound()
     {
         if (transitionClip == null)
@@ -146,6 +153,7 @@ public class SceneTransitionController : MonoBehaviour
         Destroy(soundObject, transitionClip.length + 0.1f);
     }
 
+    // Draws the transition overlay while a scene load is active.
     private void OnGUI()
     {
         if (!isTransitioning)

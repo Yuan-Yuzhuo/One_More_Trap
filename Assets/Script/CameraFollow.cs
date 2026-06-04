@@ -10,6 +10,7 @@ public class CameraFollow : MonoBehaviour
     private float shakeMagnitude = 0f;
     private Vector3 shakeOffset = Vector3.zero;
 
+    // Follows the target smoothly and applies any active screen shake offset.
     void LateUpdate()
     {
         if (target != null)
@@ -33,6 +34,7 @@ public class CameraFollow : MonoBehaviour
         }
     }
 
+    // Starts or extends a camera shake effect.
     public void Shake(float duration, float magnitude)
     {
         shakeTimer = Mathf.Max(shakeTimer, duration);

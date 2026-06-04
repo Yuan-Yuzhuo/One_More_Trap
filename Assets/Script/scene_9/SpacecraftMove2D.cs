@@ -15,10 +15,10 @@ public class SpacecraftMove2D : MonoBehaviour
     void Start()
     {
         startPos = transform.position;
-
         targetPos = startPos + Vector3.right * moveDistance;
     }
 
+    // Starts spacecraft movement and parents the player to the platform.
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (!collision.collider.CompareTag("Player")) return;
@@ -28,10 +28,10 @@ public class SpacecraftMove2D : MonoBehaviour
             StartCoroutine(MoveRight());
         }
 
-        // 让玩家跟着平台移动
         collision.collider.transform.SetParent(transform);
     }
 
+    // Moves the spacecraft to its final horizontal position.
     IEnumerator MoveRight()
     {
         moving = true;

@@ -8,6 +8,10 @@ public class GameStatsTracker : MonoBehaviour
     private const float HudY = 12f;
     private const float HudWidth = 360f;
     private const float HudHeight = 136f;
+    private const float LevelBadgeWidth = 150f;
+    private const float LevelBadgeHeight = 66f;
+    private const float LevelBadgeMargin = 12f;
+    private const int TotalChallengeLevels = 9;
     private const string MainMenuSceneName = "MainMenu";
 
     private static GameStatsTracker instance;
@@ -30,6 +34,10 @@ public class GameStatsTracker : MonoBehaviour
 
     private GUIStyle boxStyle;
     private GUIStyle labelStyle;
+    private GUIStyle levelBadgeStyle;
+    private GUIStyle levelBadgeCaptionStyle;
+    private Texture2D levelBadgeTexture;
+    private Texture2D levelBadgeBorderTexture;
     private GUIStyle dialogBoxStyle;
     private GUIStyle dialogTitleStyle;
     private GUIStyle dialogTextStyle;
@@ -37,6 +45,7 @@ public class GameStatsTracker : MonoBehaviour
     private Texture2D dialogTexture;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    // Creates the persistent stats tracker before gameplay scenes load.
     private static void Bootstrap()
     {
         EnsureInstance();
@@ -66,6 +75,7 @@ public class GameStatsTracker : MonoBehaviour
         instance.RegisterDoubleJumpUseInternal();
     }
 
+    // Ensures there is exactly one persistent stats tracker instance.
     private static void EnsureInstance()
     {
         if (instance != null)
@@ -117,9 +127,20 @@ public class GameStatsTracker : MonoBehaviour
             Destroy(dialogTexture);
         }
 
+        if (levelBadgeTexture != null)
+        {
+            Destroy(levelBadgeTexture);
+        }
+
+        if (levelBadgeBorderTexture != null)
+        {
+            Destroy(levelBadgeBorderTexture);
+        }
+
         instance = null;
     }
 
+    // Resets per-level counters when a new gameplay scene loads.
     private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         if (scene.name == MainMenuSceneName)
@@ -161,6 +182,7 @@ public class GameStatsTracker : MonoBehaviour
         return scene.buildIndex.ToString();
     }
 
+    // Clears all challenge counters and starts a fresh run.
     private void StartChallengeInternal()
     {
         challengeActive = true;
@@ -178,6 +200,7 @@ public class GameStatsTracker : MonoBehaviour
         currentSceneKey = "";
     }
 
+    // Finalizes a completed run and optionally opens the save-record dialog.
     private void CompleteChallengeInternal()
     {
         if (!challengeActive || challengeCompleted)
@@ -205,6 +228,7 @@ public class GameStatsTracker : MonoBehaviour
         OpenSaveRecordConfirmDialog();
     }
 
+    // Adds one death to the current level and total run counters.
     private void RegisterDeathInternal()
     {
         if (!challengeActive)
@@ -222,6 +246,7 @@ public class GameStatsTracker : MonoBehaviour
         totalDeaths++;
     }
 
+    // Adds one double-jump use to the current level and total run counters.
     private void RegisterDoubleJumpUseInternal()
     {
         if (!challengeActive)
@@ -233,6 +258,7 @@ public class GameStatsTracker : MonoBehaviour
         totalDoubleJumps++;
     }
 
+    // Draws the HUD and modal dialogs for challenge progress.
     private void OnGUI()
     {
         if (!showHud && !showExitConfirm && !showSaveRecordConfirm)
@@ -242,7 +268,7 @@ public class GameStatsTracker : MonoBehaviour
 
         EnsureStyles();
 
-        if (showHud)
+        if (showHud && !SceneHintController.IsHintVisible)
         {
             Rect boxRect = new Rect(HudX, HudY, HudWidth, HudHeight);
             GUI.Box(boxRect, GUIContent.none, boxStyle);
@@ -272,6 +298,8 @@ public class GameStatsTracker : MonoBehaviour
             {
                 OpenExitConfirmDialog();
             }
+
+            DrawLevelBadge();
         }
 
         if (showExitConfirm)
@@ -312,6 +340,7 @@ public class GameStatsTracker : MonoBehaviour
         Time.timeScale = timeScaleBeforeDialog;
     }
 
+    // Lazily builds GUI styles and backing textures.
     private void EnsureStyles()
     {
         if (boxStyle != null && labelStyle != null && dialogBoxStyle != null)
@@ -327,6 +356,14 @@ public class GameStatsTracker : MonoBehaviour
         dialogTexture.SetPixel(0, 0, new Color(0.08f, 0.09f, 0.08f, 0.88f));
         dialogTexture.Apply();
 
+        levelBadgeTexture = new Texture2D(1, 1);
+        levelBadgeTexture.SetPixel(0, 0, new Color(0.04f, 0.05f, 0.05f, 0.72f));
+        levelBadgeTexture.Apply();
+
+        levelBadgeBorderTexture = new Texture2D(1, 1);
+        levelBadgeBorderTexture.SetPixel(0, 0, new Color(1f, 1f, 1f, 0.28f));
+        levelBadgeBorderTexture.Apply();
+
         boxStyle = new GUIStyle(GUI.skin.box);
         boxStyle.normal.background = backgroundTexture;
 
@@ -334,6 +371,18 @@ public class GameStatsTracker : MonoBehaviour
         labelStyle.fontSize = 16;
         labelStyle.fontStyle = FontStyle.Bold;
         labelStyle.normal.textColor = Color.white;
+
+        levelBadgeStyle = new GUIStyle(GUI.skin.label);
+        levelBadgeStyle.fontSize = 20;
+        levelBadgeStyle.fontStyle = FontStyle.Bold;
+        levelBadgeStyle.alignment = TextAnchor.MiddleCenter;
+        levelBadgeStyle.normal.textColor = Color.white;
+
+        levelBadgeCaptionStyle = new GUIStyle(GUI.skin.label);
+        levelBadgeCaptionStyle.fontSize = 11;
+        levelBadgeCaptionStyle.fontStyle = FontStyle.Bold;
+        levelBadgeCaptionStyle.alignment = TextAnchor.MiddleCenter;
+        levelBadgeCaptionStyle.normal.textColor = new Color(0.82f, 0.88f, 0.9f, 1f);
 
         dialogBoxStyle = new GUIStyle(GUI.skin.box);
         dialogBoxStyle.normal.background = dialogTexture;
@@ -350,6 +399,111 @@ public class GameStatsTracker : MonoBehaviour
         dialogTextStyle.normal.textColor = Color.white;
     }
 
+    // Draws the current challenge level in the top-right corner.
+    private void DrawLevelBadge()
+    {
+        int levelNumber = GetChallengeLevelNumber(SceneManager.GetActiveScene());
+        if (levelNumber <= 0)
+        {
+            return;
+        }
+
+        Rect textRect = new Rect(
+            Screen.width - LevelBadgeWidth - LevelBadgeMargin,
+            LevelBadgeMargin,
+            LevelBadgeWidth,
+            LevelBadgeHeight
+        );
+
+        Color oldColor = GUI.color;
+
+        DrawBadgePanel(textRect);
+
+        GUI.color = new Color(0f, 0f, 0f, 0.7f);
+        GUI.Label(new Rect(textRect.x + 2f, textRect.y + 28f, textRect.width, 28f), FormatLevelBadge(levelNumber), levelBadgeStyle);
+
+        GUI.color = Color.white;
+        GUI.Label(new Rect(textRect.x, textRect.y + 26f, textRect.width, 28f), FormatLevelBadge(levelNumber), levelBadgeStyle);
+
+        GUI.color = new Color(0.82f, 0.88f, 0.9f, 1f);
+        GUI.Label(new Rect(textRect.x, textRect.y + 10f, textRect.width, 16f), "LEVEL", levelBadgeCaptionStyle);
+
+        GUI.color = oldColor;
+    }
+
+    // Draws the background, border, and accent line for the level badge.
+    private void DrawBadgePanel(Rect rect)
+    {
+        GUI.color = Color.white;
+        GUI.DrawTexture(rect, levelBadgeTexture);
+
+        GUI.DrawTexture(new Rect(rect.x, rect.y, rect.width, 1f), levelBadgeBorderTexture);
+        GUI.DrawTexture(new Rect(rect.x, rect.yMax - 1f, rect.width, 1f), levelBadgeBorderTexture);
+        GUI.DrawTexture(new Rect(rect.x, rect.y, 1f, rect.height), levelBadgeBorderTexture);
+        GUI.DrawTexture(new Rect(rect.xMax - 1f, rect.y, 1f, rect.height), levelBadgeBorderTexture);
+
+        GUI.color = new Color(0.55f, 0.85f, 1f, 0.75f);
+        GUI.DrawTexture(new Rect(rect.x + 16f, rect.y + 31f, rect.width - 32f, 1f), Texture2D.whiteTexture);
+    }
+
+    // Formats the level badge with leading zeroes for a more polished display.
+    private static string FormatLevelBadge(int levelNumber)
+    {
+        return levelNumber.ToString("00") + " / " + TotalChallengeLevels.ToString("00");
+    }
+
+    // Converts the active scene to its player-facing challenge number.
+    private static int GetChallengeLevelNumber(Scene scene)
+    {
+        if (scene.name == "1.Beginning" || scene.buildIndex == 1)
+        {
+            return 1;
+        }
+
+        if (scene.name == "Hurdle2" || scene.name == "2.MovingSpike" || scene.buildIndex == 2 || scene.buildIndex == 3)
+        {
+            return 2;
+        }
+
+        if (scene.name == "3.3MovingSpkies" || scene.buildIndex == 4)
+        {
+            return 3;
+        }
+
+        if (scene.name == "4.2MovingSpikes" || scene.buildIndex == 5)
+        {
+            return 4;
+        }
+
+        if (scene.name == "5.ChasingSpikes" || scene.buildIndex == 6)
+        {
+            return 5;
+        }
+
+        if (scene.name == "6.Coin" || scene.buildIndex == 7)
+        {
+            return 6;
+        }
+
+        if (scene.name == "7.TrapCoin" || scene.buildIndex == 8)
+        {
+            return 7;
+        }
+
+        if (scene.name == "8.maze" || scene.buildIndex == 9)
+        {
+            return 8;
+        }
+
+        if (scene.name == "9.FreeFalling" || scene.buildIndex == 10)
+        {
+            return 9;
+        }
+
+        return 0;
+    }
+
+    // Draws the confirmation dialog for quitting to the main menu.
     private void DrawExitConfirmDialog()
     {
         Rect dialogRect = GetCenteredDialogRect(420f, 170f);
@@ -375,6 +529,7 @@ public class GameStatsTracker : MonoBehaviour
         }
     }
 
+    // Draws the post-clear dialog for saving or discarding the run record.
     private void DrawSaveRecordConfirmDialog()
     {
         Rect dialogRect = GetCenteredDialogRect(460f, 210f);
@@ -424,6 +579,7 @@ public class GameStatsTracker : MonoBehaviour
         );
     }
 
+    // Formats seconds as mm:ss.hh for HUD and ranking display.
     public static string FormatTime(float time)
     {
         time = Mathf.Max(0f, time);

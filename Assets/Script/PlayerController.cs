@@ -79,6 +79,7 @@ public class PlayerController : MonoBehaviour
     private SpacecraftPlatform currentSpacecraft;
     private Vector2 lastSpacecraftPosition;
 
+    // Resolves component references and loads player audio clips from Resources.
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -129,6 +130,7 @@ public class PlayerController : MonoBehaviour
         defaultGravityScale = rb.gravityScale;
     }
 
+    // Handles player input, movement, jump, dash, attack, animation state, and fall death.
     void Update()
     {
         if (isDead)
@@ -152,7 +154,6 @@ public class PlayerController : MonoBehaviour
 
         UpdateRunSound(move);
 
-        // 移动
         if (!isDashing)
         {
             if (isGrounded)
@@ -174,13 +175,11 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // Coyote Time
         if (isGrounded)
             coyoteTimer = coyoteTime;
         else
             coyoteTimer -= Time.deltaTime;
 
-        // 跳跃
         if (!isDashing &&
             Input.GetKeyDown(PlayerInputConfig.JumpKey) &&
             (jumpCount < maxJumpCount || coyoteTimer > 0f))
@@ -209,7 +208,6 @@ public class PlayerController : MonoBehaviour
             coyoteTimer = 0f;
         }
 
-        // 小跳
         if (Input.GetKeyUp(PlayerInputConfig.JumpKey) && rb.velocity.y > 0f)
         {
             rb.velocity = new Vector2(
@@ -218,7 +216,6 @@ public class PlayerController : MonoBehaviour
             );
         }
 
-        // Dash
         if (!isDashing &&
             dashCooldownTimer <= 0f &&
             Input.GetKeyDown(PlayerInputConfig.DashKey))
@@ -245,21 +242,18 @@ public class PlayerController : MonoBehaviour
                 EndDash();
         }
 
-        // 攻击
         if (Input.GetMouseButtonDown(0))
         {
             Attack();
         }
 
-        // 掉落死亡
         if (transform.position.y < fallThreshold)
         {
             Die();
         }
     }
 
-    
-
+    // Tracks ground contacts, resets jump/dash resources, and applies enemy collision damage.
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Ground"))
@@ -315,6 +309,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Keeps grounded state stable while the player remains on one or more ground colliders.
     private void OnCollisionStay2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Ground"))
@@ -347,6 +342,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Returns true when collision normals show that the player is standing on top.
     bool IsStandingOnTop(Collision2D collision)
     {
         if (collision.contacts == null || collision.contacts.Length == 0)
@@ -363,6 +359,7 @@ public class PlayerController : MonoBehaviour
         return false;
     }
 
+    // Moves the player by the spacecraft platform delta so they ride moving platforms cleanly.
     void LateUpdate()
     {
         if (currentSpacecraft == null)
@@ -374,12 +371,12 @@ public class PlayerController : MonoBehaviour
         Vector2 currentPlatformPosition = currentSpacecraft.transform.position;
         Vector2 platformDelta = currentPlatformPosition - lastSpacecraftPosition;
 
-        // 关键：用位置差移动玩家，而不是给玩家加速度
         rb.position += platformDelta;
 
         lastSpacecraftPosition = currentPlatformPosition;
     }
 
+    // Clears ground and spacecraft state when leaving collision contacts.
     private void OnCollisionExit2D(Collision2D collision)
     {
         SpacecraftPlatform spacecraft =
@@ -389,7 +386,6 @@ public class PlayerController : MonoBehaviour
         {
             currentSpacecraft = null;
 
-            // 离开飞船时，不继承飞船速度
             float move = PlayerInputConfig.GetHorizontalMove();
             rb.velocity = new Vector2(move * airMoveSpeed, rb.velocity.y);
         }
@@ -410,6 +406,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Updates the visual facing direction and mirrors the attack point.
     void SetFacing(int dir)
     {
         if (dir == facingDir)
@@ -430,6 +427,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Updates invincibility timing and blink feedback after damage.
     void UpdateInvincible()
     {
         if (!isInvincible)
@@ -459,6 +457,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Plays the jump sound once for each successful jump.
     void PlayJumpSound()
     {
         if (audioSource == null || jumpClip == null)
@@ -467,6 +466,7 @@ public class PlayerController : MonoBehaviour
         audioSource.PlayOneShot(jumpClip, jumpVolume);
     }
 
+    // Loops the run sound only while the player is moving on the ground.
     void UpdateRunSound(float move)
     {
         if (runAudioSource == null || runClip == null)
@@ -490,6 +490,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Performs a melee attack and applies damage to enemies inside the attack radius.
     void Attack()
     {
         if (animator != null)
@@ -542,6 +543,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Applies player damage, knockback, invincibility, and death when health reaches zero.
     void TakeDamage(int amount, Vector2 knockback)
     {
         rb.velocity = Vector2.zero;
@@ -570,6 +572,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    // Starts a dash in the current input direction or facing direction.
     void StartDash(float inputDir)
     {
         isDashing = true;
@@ -591,12 +594,14 @@ public class PlayerController : MonoBehaviour
         PlayDashSound();
     }
 
+    // Ends dash state and restores normal gravity.
     void EndDash()
     {
         isDashing = false;
         rb.gravityScale = defaultGravityScale;
     }
 
+    // Plays the dash sound effect.
     void PlayDashSound()
     {
         if (audioSource == null || dashClip == null)
@@ -605,6 +610,7 @@ public class PlayerController : MonoBehaviour
         audioSource.PlayOneShot(dashClip, dashVolume);
     }
 
+    // Registers death, stops player motion, plays audio feedback, and reloads the scene.
     public void Die()
     {
         if (isDead)
@@ -624,12 +630,14 @@ public class PlayerController : MonoBehaviour
         StartCoroutine(RestartAsync());
     }
 
+    // Requests a scene reload through the global transition controller.
     IEnumerator RestartAsync()
     {
         yield return null;
         SceneTransitionController.LoadSceneWithoutSound(SceneManager.GetActiveScene().buildIndex);
     }
 
+    // Plays death audio from a temporary object so it survives scene reload.
     void PlayDeathSound()
     {
         if (deathClip == null)
@@ -645,6 +653,7 @@ public class PlayerController : MonoBehaviour
         Destroy(soundObject, deathClip.length + 0.1f);
     }
 
+    // Draws the melee attack radius in the editor.
     void OnDrawGizmosSelected()
     {
         if (attackPoint == null)

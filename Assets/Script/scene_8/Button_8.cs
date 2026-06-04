@@ -22,13 +22,13 @@ public class FloorButton2D : MonoBehaviour
         startPos = pressPart.localPosition;
         targetPos = startPos;
 
-        // 一开始门隐藏
         if (door != null)
         {
             door.SetActive(false);
         }
     }
 
+    // Smoothly animates the button press part toward its target position.
     private void Update()
     {
         pressPart.localPosition = Vector3.Lerp(
@@ -38,6 +38,7 @@ public class FloorButton2D : MonoBehaviour
         );
     }
 
+    // Presses the button once, starts linked spikes, and reveals the linked door.
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (!other.CompareTag("Player")) return;
@@ -53,7 +54,6 @@ public class FloorButton2D : MonoBehaviour
             spikeSequence.StartSequence();
         }
 
-        // 门出现
         if (door != null)
         {
             door.SetActive(true);

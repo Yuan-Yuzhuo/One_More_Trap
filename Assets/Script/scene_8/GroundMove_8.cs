@@ -3,8 +3,6 @@ using UnityEngine;
 public class GroundMoveRight : MonoBehaviour
 {
     public float moveSpeed = 2f;
-
-    // 向右移动多少距离
     public float moveDistance = 5f;
 
     private bool isMoving = false;
@@ -18,13 +16,13 @@ public class GroundMoveRight : MonoBehaviour
         targetX = startX + moveDistance;
     }
 
+    // Moves the platform right until it reaches its configured target.
     void Update()
     {
         if (!isMoving) return;
 
         transform.Translate(Vector2.right * moveSpeed * Time.deltaTime);
 
-        // 到达目标位置停止
         if (transform.position.x >= targetX)
         {
             Vector3 pos = transform.position;
@@ -35,6 +33,7 @@ public class GroundMoveRight : MonoBehaviour
         }
     }
 
+    // Starts the platform movement.
     public void StartMove()
     {
         isMoving = true;

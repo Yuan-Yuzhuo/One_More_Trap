@@ -10,10 +10,11 @@ public class GroundTrigger_2 : MonoBehaviour
 
         if (ground == null)
         {
-            Debug.LogError("父物体没有 Retractable_2 脚本！");
+            Debug.LogError("No Retractable_2 script found on parent object!");
         }
     }
 
+    // Triggers the parent one-way retractable ground when the player enters this trigger.
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (other.CompareTag("Player"))

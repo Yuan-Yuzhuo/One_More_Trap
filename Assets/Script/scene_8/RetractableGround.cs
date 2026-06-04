@@ -21,14 +21,12 @@ public class RetractableGround : MonoBehaviour
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         originalWidth = sr.bounds.size.x;
-
-        // 记录地板左边的位置
         leftX = originalPosition.x - originalWidth / 2f;
 
-        // 一开始保持完整显示
         SetGroundRatio(1f);
     }
 
+    // Starts the shrink-and-extend animation if it is not already running.
     public void TriggerGround()
     {
         if (!isRunning)
@@ -37,21 +35,19 @@ public class RetractableGround : MonoBehaviour
         }
     }
 
+    // Shrinks the platform briefly, waits, then restores its full width.
     IEnumerator ShrinkAndExtend()
     {
         isRunning = true;
 
-        // 缩回到 1/5
         yield return ChangeRatio(1f, 0.9f, shrinkTime);
-
         yield return new WaitForSeconds(stayTime);
-
-        // 再伸回完整
         yield return ChangeRatio(0.9f, 1f, extendTime);
 
         isRunning = false;
     }
 
+    // Interpolates the visible platform width between two ratios.
     IEnumerator ChangeRatio(float from, float to, float time)
     {
         float timer = 0f;
@@ -70,16 +66,15 @@ public class RetractableGround : MonoBehaviour
         SetGroundRatio(to);
     }
 
+    // Resizes the platform while keeping its left edge fixed.
     void SetGroundRatio(float ratio)
     {
-        // 只改变 X 方向，Y 保持原来的大小
         transform.localScale = new Vector3(
             originalScale.x * ratio,
             originalScale.y,
             originalScale.z
         );
 
-        // 左边固定，右边缩回/伸出
         float currentWidth = originalWidth * ratio;
 
         transform.position = new Vector3(

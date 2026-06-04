@@ -11,6 +11,7 @@ public class SpikeAppear : MonoBehaviour
         StartCoroutine(Appear());
     }
 
+    // Reveals the linked spike group after a delay.
     IEnumerator Appear()
     {
         yield return new WaitForSeconds(delay);

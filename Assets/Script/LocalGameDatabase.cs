@@ -69,6 +69,7 @@ public static class LocalGameDatabase
         get { return Path.Combine(Application.persistentDataPath, DatabaseFileName); }
     }
 
+    // Creates a local account and logs it in when validation succeeds.
     public static RegisterResult Register(string userName, string password)
     {
         Load();
@@ -101,6 +102,7 @@ public static class LocalGameDatabase
         return RegisterResult.Success;
     }
 
+    // Validates credentials against the local database and stores the active user.
     public static LoginResult Login(string userName, string password)
     {
         Load();
@@ -132,11 +134,13 @@ public static class LocalGameDatabase
         return LoginResult.Success;
     }
 
+    // Clears the active local user.
     public static void Logout()
     {
         currentUserName = "";
     }
 
+    // Adds a completed challenge record to the matching account.
     public static void AddChallengeRecord(ChallengeRecord record)
     {
         Load();
@@ -161,6 +165,7 @@ public static class LocalGameDatabase
         Save();
     }
 
+    // Returns records sorted by lowest death count.
     public static List<ChallengeRecord> GetDeathRanking(int limit)
     {
         return GetAllRecords()
@@ -170,6 +175,7 @@ public static class LocalGameDatabase
             .ToList();
     }
 
+    // Returns records sorted by fastest clear time.
     public static List<ChallengeRecord> GetTimeRanking(int limit)
     {
         return GetAllRecords()
@@ -179,6 +185,7 @@ public static class LocalGameDatabase
             .ToList();
     }
 
+    // Returns records sorted by fewest double-jump uses.
     public static List<ChallengeRecord> GetDoubleJumpRanking(int limit)
     {
         return GetAllRecords()
@@ -209,6 +216,7 @@ public static class LocalGameDatabase
         return records;
     }
 
+    // Loads the JSON database from persistent storage once per session.
     private static void Load()
     {
         if (state != null)
@@ -238,12 +246,14 @@ public static class LocalGameDatabase
         }
     }
 
+    // Saves the current database state to persistent storage.
     private static void Save()
     {
         string json = JsonUtility.ToJson(state, true);
         File.WriteAllText(DatabasePath, json);
     }
 
+    // Finds an account by user name using case-insensitive comparison.
     private static PlayerAccount FindAccount(string userName)
     {
         Load();
@@ -265,6 +275,7 @@ public static class LocalGameDatabase
         return string.IsNullOrEmpty(userName) ? "" : userName.Trim();
     }
 
+    // Hashes a password before storing or comparing credentials.
     private static string HashPassword(string password)
     {
         using (SHA256 sha256 = SHA256.Create())
