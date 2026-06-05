@@ -9,6 +9,7 @@ public class SceneTransitionController : MonoBehaviour
     private static SceneTransitionController instance;
 
     [SerializeField] private float fadeDuration = 0.45f;
+    [SerializeField] private float frozenFadeDuration = 1.1f;
     [SerializeField] private float transitionVolume = 1f;
 
     private AudioClip transitionClip;
@@ -37,7 +38,13 @@ public class SceneTransitionController : MonoBehaviour
     public static void LoadSceneWithoutSound(int sceneIndex)
     {
         EnsureInstance();
-        instance.StartTransition(sceneIndex, false);
+        instance.StartTransition(sceneIndex, false, false);
+    }
+
+    public static void LoadSceneFrozen(int sceneIndex)
+    {
+        EnsureInstance();
+        instance.StartTransition(sceneIndex, true, true);
     }
 
     // Ensures there is exactly one transition controller across scenes.
@@ -69,6 +76,12 @@ public class SceneTransitionController : MonoBehaviour
     // Begins a fade transition to a scene by build index.
     private void StartTransition(int sceneIndex, bool playSound)
     {
+        StartTransition(sceneIndex, playSound, false);
+    }
+
+    // Begins a fade transition to a scene by build index.
+    private void StartTransition(int sceneIndex, bool playSound, bool freezeBeforeFade)
+    {
         if (isTransitioning)
         {
             return;
@@ -76,11 +89,17 @@ public class SceneTransitionController : MonoBehaviour
 
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(sceneIndex);
         loadOperation.allowSceneActivation = false;
-        StartCoroutine(TransitionRoutine(loadOperation, playSound));
+        StartCoroutine(TransitionRoutine(loadOperation, playSound, freezeBeforeFade));
     }
 
     // Begins a fade transition to a scene by name.
     private void StartTransition(string sceneName, bool playSound)
+    {
+        StartTransition(sceneName, playSound, false);
+    }
+
+    // Begins a fade transition to a scene by name.
+    private void StartTransition(string sceneName, bool playSound, bool freezeBeforeFade)
     {
         if (isTransitioning)
         {
@@ -89,21 +108,27 @@ public class SceneTransitionController : MonoBehaviour
 
         AsyncOperation loadOperation = SceneManager.LoadSceneAsync(sceneName);
         loadOperation.allowSceneActivation = false;
-        StartCoroutine(TransitionRoutine(loadOperation, playSound));
+        StartCoroutine(TransitionRoutine(loadOperation, playSound, freezeBeforeFade));
     }
 
     // Fades to black, activates the loaded scene, then fades back in.
-    private IEnumerator TransitionRoutine(AsyncOperation loadOperation, bool playSound)
+    private IEnumerator TransitionRoutine(AsyncOperation loadOperation, bool playSound, bool freezeBeforeFade)
     {
         isTransitioning = true;
         fadeAlpha = 0f;
+        float timeScaleBeforeTransition = Time.timeScale;
 
         if (playSound)
         {
             PlayTransitionSound();
         }
 
-        yield return FadeOverlay(0f, 1f);
+        if (freezeBeforeFade)
+        {
+            Time.timeScale = 0f;
+        }
+
+        yield return FadeOverlay(0f, 1f, freezeBeforeFade ? frozenFadeDuration : fadeDuration);
 
         loadOperation.allowSceneActivation = true;
 
@@ -114,15 +139,20 @@ public class SceneTransitionController : MonoBehaviour
 
         yield return null;
 
-        yield return FadeOverlay(1f, 0f);
+        if (freezeBeforeFade)
+        {
+            Time.timeScale = timeScaleBeforeTransition;
+        }
+
+        yield return FadeOverlay(1f, 0f, fadeDuration);
         fadeAlpha = 0f;
         isTransitioning = false;
     }
 
     // Animates the full-screen black overlay alpha.
-    private IEnumerator FadeOverlay(float from, float to)
+    private IEnumerator FadeOverlay(float from, float to, float duration)
     {
-        float duration = Mathf.Max(0.01f, fadeDuration);
+        duration = Mathf.Max(0.01f, duration);
         float timer = 0f;
 
         while (timer < duration)

@@ -118,7 +118,7 @@ public class SceneHintController : MonoBehaviour
 
         if (sceneName == "9.FreeFalling" || buildIndex == 10)
         {
-            return "Be careful: inertia will affect your movement.";
+            return "Be careful: inertia will affect your movement. Watch out for the red lines; they are lethal.";
         }
 
         return "";

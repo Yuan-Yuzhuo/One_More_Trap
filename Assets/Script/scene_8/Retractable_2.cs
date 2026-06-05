@@ -12,11 +12,13 @@ public class Retractable_2 : MonoBehaviour
     private Vector3 originalPosition;
     private float originalWidth;
     private float leftX;
+    private Collider2D groundCollider;
 
     void Start()
     {
         originalScale = transform.localScale;
         originalPosition = transform.position;
+        groundCollider = GetComponent<Collider2D>();
 
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         originalWidth = sr.bounds.size.x;
@@ -54,11 +56,13 @@ public class Retractable_2 : MonoBehaviour
             float ratio = Mathf.Lerp(from, to, t);
 
             SetGroundRatio(ratio);
+            ReleaseTrappedPlayers();
 
             yield return null;
         }
 
         SetGroundRatio(to);
+        ReleaseTrappedPlayers();
     }
 
     // Resizes the platform while keeping its left edge fixed.
@@ -77,5 +81,19 @@ public class Retractable_2 : MonoBehaviour
             originalPosition.y,
             originalPosition.z
         );
+    }
+
+    // Lets wedged players fall through instead of being pinned between retractable ground pieces.
+    void ReleaseTrappedPlayers()
+    {
+        if (groundCollider == null)
+            return;
+
+        PlayerController[] players = FindObjectsOfType<PlayerController>();
+
+        for (int i = 0; i < players.Length; i++)
+        {
+            players[i].ReleaseIfEmbeddedInGround(groundCollider);
+        }
     }
 }

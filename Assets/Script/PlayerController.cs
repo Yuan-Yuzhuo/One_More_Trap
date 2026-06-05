@@ -69,20 +69,27 @@ public class PlayerController : MonoBehaviour
     private Vector3 attackPointStartLocalPos;
 
     private HashSet<int> groundColliderIds = new HashSet<int>();
+    private HashSet<Collider2D> ignoredGroundColliders = new HashSet<Collider2D>();
 
     public Transform groundCheck;
     public float groundCheckRadius = 0.12f;
     public LayerMask groundLayer;
+    [SerializeField] private float groundTrapReleaseDepth = 0.08f;
+    [SerializeField] private float groundTrapReleaseProbePadding = 0.08f;
+    [SerializeField] private float groundTrapFallSpeed = 8f;
 
     private bool isDead = false;
 
     private SpacecraftPlatform currentSpacecraft;
     private Vector2 lastSpacecraftPosition;
+    private Collider2D[] playerColliders;
+    private Coroutine restoreGroundCollisionsRoutine;
 
     // Resolves component references and loads player audio clips from Resources.
     void Awake()
     {
         rb = GetComponent<Rigidbody2D>();
+        playerColliders = GetComponentsInChildren<Collider2D>();
 
         if (spriteRenderer == null)
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
@@ -357,6 +364,290 @@ public class PlayerController : MonoBehaviour
         }
 
         return false;
+    }
+
+    // Drops the player through solid ground when a moving platform wedges them into level geometry.
+    public void ReleaseIfEmbeddedInGround(Collider2D activeGroundCollider)
+    {
+        if (isDead || activeGroundCollider == null)
+            return;
+
+        Physics2D.SyncTransforms();
+
+        Bounds playerBounds;
+
+        if (!TryGetPlayerBodyBounds(out playerBounds))
+            return;
+
+        if (!IsSolidGroundCollider(activeGroundCollider))
+            return;
+
+        bool activeGroundEmbedded = IsPlayerEmbeddedInGround(activeGroundCollider);
+
+        if (!activeGroundEmbedded && !IsGroundConstrainingPlayer(activeGroundCollider))
+            return;
+
+        bool blockedByUpperGround = false;
+        bool embeddedBlockerFound = false;
+        List<Collider2D> groundsToIgnore = new List<Collider2D>();
+        groundsToIgnore.Add(activeGroundCollider);
+
+        Collider2D[] nearbyColliders = Physics2D.OverlapBoxAll(
+            playerBounds.center,
+            new Vector2(
+                playerBounds.size.x + groundTrapReleaseProbePadding * 2f,
+                playerBounds.size.y + groundTrapReleaseProbePadding * 2f
+            ),
+            0f
+        );
+
+        for (int i = 0; i < nearbyColliders.Length; i++)
+        {
+            Collider2D groundCollider = nearbyColliders[i];
+
+            if (groundCollider == activeGroundCollider)
+                continue;
+
+            if (IsSolidGroundCollider(groundCollider) &&
+                IsGroundBlockingPlayerBody(playerBounds, groundCollider.bounds))
+            {
+                blockedByUpperGround = true;
+
+                if (IsPlayerEmbeddedInGround(groundCollider) &&
+                    !groundsToIgnore.Contains(groundCollider))
+                {
+                    embeddedBlockerFound = true;
+                    groundsToIgnore.Add(groundCollider);
+                }
+            }
+        }
+
+        if (!blockedByUpperGround || (!activeGroundEmbedded && !embeddedBlockerFound))
+            return;
+
+        IgnoreGroundCollisionsTemporarily(groundsToIgnore);
+    }
+
+    // Builds a combined bounds around the player's non-trigger body colliders.
+    private bool TryGetPlayerBodyBounds(out Bounds playerBounds)
+    {
+        playerBounds = new Bounds(transform.position, Vector3.zero);
+        bool hasBodyCollider = false;
+
+        for (int i = 0; i < playerColliders.Length; i++)
+        {
+            Collider2D playerCollider = playerColliders[i];
+
+            if (!IsBodyCollider(playerCollider))
+                continue;
+
+            if (!hasBodyCollider)
+            {
+                playerBounds = playerCollider.bounds;
+                hasBodyCollider = true;
+            }
+            else
+            {
+                playerBounds.Encapsulate(playerCollider.bounds);
+            }
+        }
+
+        return hasBodyCollider;
+    }
+
+    // Returns true for enabled non-trigger player colliders that should block ground.
+    private bool IsBodyCollider(Collider2D playerCollider)
+    {
+        return playerCollider != null &&
+            playerCollider.enabled &&
+            !playerCollider.isTrigger;
+    }
+
+    // Returns true for enabled solid ground colliders.
+    private bool IsSolidGroundCollider(Collider2D groundCollider)
+    {
+        return groundCollider != null &&
+            groundCollider.enabled &&
+            !groundCollider.isTrigger &&
+            groundCollider.CompareTag("Ground");
+    }
+
+    // Checks whether a ground collider is currently touching or pressing the player.
+    private bool IsGroundConstrainingPlayer(Collider2D groundCollider)
+    {
+        if (!IsSolidGroundCollider(groundCollider))
+            return false;
+
+        for (int i = 0; i < playerColliders.Length; i++)
+        {
+            Collider2D playerCollider = playerColliders[i];
+
+            if (!IsBodyCollider(playerCollider))
+                continue;
+
+            ColliderDistance2D distance = Physics2D.Distance(playerCollider, groundCollider);
+
+            if (distance.isOverlapped ||
+                distance.distance <= groundTrapReleaseProbePadding)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Detects when the player's body is sunk into a ground collider instead of only touching it.
+    private bool IsPlayerEmbeddedInGround(Collider2D groundCollider)
+    {
+        if (!IsSolidGroundCollider(groundCollider))
+            return false;
+
+        for (int i = 0; i < playerColliders.Length; i++)
+        {
+            Collider2D playerCollider = playerColliders[i];
+
+            if (!IsBodyCollider(playerCollider))
+                continue;
+
+            ColliderDistance2D distance = Physics2D.Distance(playerCollider, groundCollider);
+
+            if (distance.isOverlapped &&
+                distance.distance < -groundTrapReleaseDepth)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Detects a second ground surface pressing into the player's body from above or the side.
+    private bool IsGroundBlockingPlayerBody(Bounds playerBounds, Bounds groundBounds)
+    {
+        float horizontalOverlap =
+            Mathf.Min(playerBounds.max.x, groundBounds.max.x) -
+            Mathf.Max(playerBounds.min.x, groundBounds.min.x);
+
+        bool reachesPlayerBody =
+            groundBounds.min.y < playerBounds.max.y + groundTrapReleaseProbePadding &&
+            groundBounds.max.y > playerBounds.center.y;
+
+        return horizontalOverlap > groundTrapReleaseDepth && reachesPlayerBody;
+    }
+
+    // Temporarily disables player-ground collision pairs and gives gravity control again.
+    private void IgnoreGroundCollisionsTemporarily(List<Collider2D> groundColliders)
+    {
+        bool ignoredNewGround = false;
+
+        for (int i = 0; i < groundColliders.Count; i++)
+        {
+            Collider2D groundCollider = groundColliders[i];
+
+            if (!IsSolidGroundCollider(groundCollider))
+                continue;
+
+            SetGroundCollisionIgnored(groundCollider, true);
+
+            if (!ignoredGroundColliders.Contains(groundCollider))
+            {
+                ignoredGroundColliders.Add(groundCollider);
+                ignoredNewGround = true;
+            }
+        }
+
+        if (!ignoredNewGround)
+            return;
+
+        groundColliderIds.Clear();
+        isGrounded = false;
+        currentSpacecraft = null;
+
+        if (isDashing)
+        {
+            EndDash();
+        }
+
+        rb.velocity = new Vector2(
+            rb.velocity.x,
+            Mathf.Min(rb.velocity.y, -Mathf.Abs(groundTrapFallSpeed))
+        );
+
+        if (restoreGroundCollisionsRoutine == null)
+        {
+            restoreGroundCollisionsRoutine = StartCoroutine(RestoreIgnoredGroundCollisions());
+        }
+    }
+
+    // Restores ignored ground collisions after the player has fully separated from each collider.
+    private IEnumerator RestoreIgnoredGroundCollisions()
+    {
+        WaitForFixedUpdate waitForFixedUpdate = new WaitForFixedUpdate();
+
+        while (ignoredGroundColliders.Count > 0)
+        {
+            yield return waitForFixedUpdate;
+
+            Collider2D[] colliders = new Collider2D[ignoredGroundColliders.Count];
+            ignoredGroundColliders.CopyTo(colliders);
+
+            for (int i = 0; i < colliders.Length; i++)
+            {
+                Collider2D groundCollider = colliders[i];
+
+                if (groundCollider == null ||
+                    !groundCollider.enabled ||
+                    !IsPlayerOverlappingGround(groundCollider))
+                {
+                    SetGroundCollisionIgnored(groundCollider, false);
+                    ignoredGroundColliders.Remove(groundCollider);
+                }
+            }
+        }
+
+        restoreGroundCollisionsRoutine = null;
+    }
+
+    // Returns true while any player body collider is still inside the ignored ground.
+    private bool IsPlayerOverlappingGround(Collider2D groundCollider)
+    {
+        if (groundCollider == null)
+            return false;
+
+        for (int i = 0; i < playerColliders.Length; i++)
+        {
+            Collider2D playerCollider = playerColliders[i];
+
+            if (!IsBodyCollider(playerCollider))
+                continue;
+
+            ColliderDistance2D distance = Physics2D.Distance(playerCollider, groundCollider);
+
+            if (distance.isOverlapped)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Applies or clears Physics2D.IgnoreCollision for all player body colliders.
+    private void SetGroundCollisionIgnored(Collider2D groundCollider, bool ignored)
+    {
+        if (groundCollider == null)
+            return;
+
+        for (int i = 0; i < playerColliders.Length; i++)
+        {
+            Collider2D playerCollider = playerColliders[i];
+
+            if (!IsBodyCollider(playerCollider))
+                continue;
+
+            Physics2D.IgnoreCollision(playerCollider, groundCollider, ignored);
+        }
     }
 
     // Moves the player by the spacecraft platform delta so they ride moving platforms cleanly.
