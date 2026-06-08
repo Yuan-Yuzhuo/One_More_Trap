@@ -10,9 +10,7 @@ public class PlayerController : MonoBehaviour
     public float accel = 40f;
     public float decel = 50f;
     public float jumpForce = 14f;
-    public float jumpCutMultiplier = 0.5f;
     public float fallMultiplier = 2.0f;
-    public float lowJumpMultiplier = 1.4f;
 
     public float dashSpeed = 14f;
     public float dashTime = 0.15f;
@@ -74,6 +72,9 @@ public class PlayerController : MonoBehaviour
     public Transform groundCheck;
     public float groundCheckRadius = 0.12f;
     public LayerMask groundLayer;
+    [SerializeField] private float wallSlideProbeDistance = 0.06f;
+    [SerializeField] private float wallSlideBodyHeightScale = 0.78f;
+    [SerializeField] private float wallSlideMinNormalX = 0.55f;
     [SerializeField] private float groundTrapReleaseDepth = 0.08f;
     [SerializeField] private float groundTrapReleaseProbePadding = 0.08f;
     [SerializeField] private float groundTrapFallSpeed = 8f;
@@ -178,7 +179,7 @@ public class PlayerController : MonoBehaviour
             }
             else
             {
-                rb.velocity = new Vector2(move * airMoveSpeed, rb.velocity.y);
+                rb.velocity = new Vector2(GetAirMoveVelocity(move), rb.velocity.y);
             }
         }
 
@@ -213,14 +214,6 @@ public class PlayerController : MonoBehaviour
 
             jumpCount++;
             coyoteTimer = 0f;
-        }
-
-        if (Input.GetKeyUp(PlayerInputConfig.JumpKey) && rb.velocity.y > 0f)
-        {
-            rb.velocity = new Vector2(
-                rb.velocity.x,
-                rb.velocity.y * jumpCutMultiplier
-            );
         }
 
         if (!isDashing &&
@@ -461,6 +454,66 @@ public class PlayerController : MonoBehaviour
         return playerCollider != null &&
             playerCollider.enabled &&
             !playerCollider.isTrigger;
+    }
+
+    // Prevents airborne input from pinning the player against ground side walls.
+    private float GetAirMoveVelocity(float move)
+    {
+        if (IsPressingIntoGroundWall(move))
+        {
+            return 0f;
+        }
+
+        return move * airMoveSpeed;
+    }
+
+    // Detects a solid ground wall directly in the direction of airborne movement.
+    private bool IsPressingIntoGroundWall(float move)
+    {
+        if (isGrounded || Mathf.Abs(move) <= 0.01f)
+        {
+            return false;
+        }
+
+        Bounds playerBounds;
+
+        if (!TryGetPlayerBodyBounds(out playerBounds))
+        {
+            return false;
+        }
+
+        float direction = Mathf.Sign(move);
+        Vector2 castDirection = new Vector2(direction, 0f);
+        Vector2 castSize = new Vector2(
+            playerBounds.size.x * 0.92f,
+            playerBounds.size.y * wallSlideBodyHeightScale
+        );
+
+        RaycastHit2D[] hits = Physics2D.BoxCastAll(
+            playerBounds.center,
+            castSize,
+            0f,
+            castDirection,
+            wallSlideProbeDistance
+        );
+
+        for (int i = 0; i < hits.Length; i++)
+        {
+            RaycastHit2D hit = hits[i];
+
+            if (!IsSolidGroundCollider(hit.collider))
+            {
+                continue;
+            }
+
+            if (Mathf.Abs(hit.normal.x) >= wallSlideMinNormalX &&
+                Mathf.Sign(hit.normal.x) != direction)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     // Returns true for enabled solid ground colliders.

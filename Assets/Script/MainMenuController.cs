@@ -8,9 +8,18 @@ public class MainMenuController : MonoBehaviour
     private const int FirstChallengeSceneIndex = 1;
     private const int RankingLimit = 10;
     private const string DemoVideoResourceName = "Video Project";
+    private const string MenuBgmResourceName = "candidate_1";
+    private const string MenuBgmFallbackResourceName = "cadidate_1";
+    private const string MenuBgmMutedPrefKey = "MainMenu_BgmMuted";
+    private const float MenuBgmVolume = 0.22f;
+    private const float MenuClickVolume = 1f;
+    private const float MenuMuteButtonSize = 40f;
+    private const float MenuMuteButtonMargin = 18f;
 
     private AudioSource menuAudioSource;
+    private AudioSource menuBgmAudioSource;
     private AudioClip clickClip;
+    private AudioClip menuBgmClip;
     private VideoPlayer demoVideoPlayer;
     private RenderTexture demoRenderTexture;
     private VideoClip demoVideoClip;
@@ -36,6 +45,8 @@ public class MainMenuController : MonoBehaviour
     private MenuView currentView = MenuView.Login;
     private RankingView rankingView = RankingView.Deaths;
     private PlayerInputAction? pendingInputAction = null;
+    private bool hasLoadedMenuBgmMutePreference = false;
+    private bool isMenuBgmMuted = false;
 
     private string userName = "";
     private string password = "";
@@ -45,9 +56,15 @@ public class MainMenuController : MonoBehaviour
 
     private GUIStyle titleStyle;
     private GUIStyle titleShadowStyle;
+    private GUIStyle subtitleStyle;
     private GUIStyle labelStyle;
     private GUIStyle messageStyle;
+    private GUIStyle statusStyle;
     private GUIStyle panelStyle;
+    private GUIStyle primaryButtonStyle;
+    private GUIStyle secondaryButtonStyle;
+    private GUIStyle tertiaryButtonStyle;
+    private GUIStyle textFieldStyle;
     private GUIStyle tableHeaderStyle;
     private GUIStyle tableCellStyle;
     private GUIStyle tableAltCellStyle;
@@ -57,11 +74,31 @@ public class MainMenuController : MonoBehaviour
     private GUIStyle dialogTitleStyle;
     private GUIStyle dialogTextStyle;
     private GUIStyle demoMessageStyle;
+    private GUIStyle iconButtonStyle;
     private Texture2D panelTexture;
     private Texture2D dialogTexture;
+    private Texture2D screenShadeTexture;
+    private Texture2D titleGlowTexture;
+    private Texture2D particleTexture;
+    private Texture2D leafTexture;
+    private Texture2D primaryButtonTexture;
+    private Texture2D primaryButtonHoverTexture;
+    private Texture2D primaryButtonActiveTexture;
+    private Texture2D secondaryButtonTexture;
+    private Texture2D secondaryButtonHoverTexture;
+    private Texture2D secondaryButtonActiveTexture;
+    private Texture2D tertiaryButtonTexture;
+    private Texture2D tertiaryButtonHoverTexture;
+    private Texture2D tertiaryButtonActiveTexture;
+    private Texture2D textFieldTexture;
     private Texture2D tableHeaderTexture;
     private Texture2D tableRowTexture;
     private Texture2D tableAltRowTexture;
+    private Texture2D iconButtonTexture;
+    private Texture2D iconButtonHoverTexture;
+    private Texture2D iconButtonActiveTexture;
+    private Texture2D speakerIconTexture;
+    private Texture2D mutedSpeakerIconTexture;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     // Ensures the menu controller exists whenever the main menu scene loads.
@@ -88,30 +125,99 @@ public class MainMenuController : MonoBehaviour
         controllerObject.AddComponent<MainMenuController>();
     }
 
-    // Lazily creates menu audio and loads the click sound.
+    // Lazily creates menu audio, loads click feedback, and starts low-volume BGM.
     private void EnsureAudio()
     {
-        if (menuAudioSource != null)
+        if (menuAudioSource == null)
+        {
+            menuAudioSource = gameObject.AddComponent<AudioSource>();
+            menuAudioSource.playOnAwake = false;
+            menuAudioSource.spatialBlend = 0f;
+        }
+
+        if (menuBgmAudioSource == null)
+        {
+            menuBgmAudioSource = gameObject.AddComponent<AudioSource>();
+            menuBgmAudioSource.playOnAwake = false;
+            menuBgmAudioSource.loop = true;
+            menuBgmAudioSource.volume = MenuBgmVolume;
+            menuBgmAudioSource.spatialBlend = 0f;
+        }
+
+        if (clickClip == null)
+        {
+            clickClip = Resources.Load<AudioClip>("click");
+        }
+
+        if (menuBgmClip == null)
+        {
+            menuBgmClip = Resources.Load<AudioClip>(MenuBgmResourceName);
+
+            if (menuBgmClip == null)
+            {
+                menuBgmClip = Resources.Load<AudioClip>(MenuBgmFallbackResourceName);
+            }
+        }
+
+        EnsureMenuBgmMutePreference();
+        PlayMenuBgm();
+    }
+
+    // Loads the saved BGM mute preference once per menu controller.
+    private void EnsureMenuBgmMutePreference()
+    {
+        if (hasLoadedMenuBgmMutePreference)
         {
             return;
         }
 
-        menuAudioSource = gameObject.AddComponent<AudioSource>();
-        menuAudioSource.playOnAwake = false;
-
-        clickClip = Resources.Load<AudioClip>("click");
+        isMenuBgmMuted = PlayerPrefs.GetInt(MenuBgmMutedPrefKey, 0) == 1;
+        hasLoadedMenuBgmMutePreference = true;
     }
 
     // Plays the menu click sound if it is available.
     private void PlayClickSound()
     {
-        
         EnsureAudio();
-
 
         if (clickClip != null)
         {
-            menuAudioSource.PlayOneShot(clickClip);
+            menuAudioSource.PlayOneShot(clickClip, MenuClickVolume);
+        }
+    }
+
+    // Keeps the main menu background music looping quietly under UI sounds.
+    private void PlayMenuBgm()
+    {
+        if (menuBgmAudioSource == null || menuBgmClip == null)
+        {
+            return;
+        }
+
+        menuBgmAudioSource.volume = MenuBgmVolume;
+        menuBgmAudioSource.mute = isMenuBgmMuted;
+
+        if (menuBgmAudioSource.clip != menuBgmClip)
+        {
+            menuBgmAudioSource.clip = menuBgmClip;
+        }
+
+        if (!menuBgmAudioSource.isPlaying)
+        {
+            menuBgmAudioSource.Play();
+        }
+    }
+
+    // Toggles only the menu BGM, leaving click feedback audible.
+    private void SetMenuBgmMuted(bool muted)
+    {
+        isMenuBgmMuted = muted;
+        PlayerPrefs.SetInt(MenuBgmMutedPrefKey, isMenuBgmMuted ? 1 : 0);
+        PlayerPrefs.Save();
+
+        if (menuBgmAudioSource != null)
+        {
+            menuBgmAudioSource.mute = isMenuBgmMuted;
         }
     }
 
@@ -125,6 +231,76 @@ public class MainMenuController : MonoBehaviour
         if (dialogTexture != null)
         {
             Destroy(dialogTexture);
+        }
+
+        if (screenShadeTexture != null)
+        {
+            Destroy(screenShadeTexture);
+        }
+
+        if (titleGlowTexture != null)
+        {
+            Destroy(titleGlowTexture);
+        }
+
+        if (particleTexture != null)
+        {
+            Destroy(particleTexture);
+        }
+
+        if (leafTexture != null)
+        {
+            Destroy(leafTexture);
+        }
+
+        if (primaryButtonTexture != null)
+        {
+            Destroy(primaryButtonTexture);
+        }
+
+        if (primaryButtonHoverTexture != null)
+        {
+            Destroy(primaryButtonHoverTexture);
+        }
+
+        if (primaryButtonActiveTexture != null)
+        {
+            Destroy(primaryButtonActiveTexture);
+        }
+
+        if (secondaryButtonTexture != null)
+        {
+            Destroy(secondaryButtonTexture);
+        }
+
+        if (secondaryButtonHoverTexture != null)
+        {
+            Destroy(secondaryButtonHoverTexture);
+        }
+
+        if (secondaryButtonActiveTexture != null)
+        {
+            Destroy(secondaryButtonActiveTexture);
+        }
+
+        if (tertiaryButtonTexture != null)
+        {
+            Destroy(tertiaryButtonTexture);
+        }
+
+        if (tertiaryButtonHoverTexture != null)
+        {
+            Destroy(tertiaryButtonHoverTexture);
+        }
+
+        if (tertiaryButtonActiveTexture != null)
+        {
+            Destroy(tertiaryButtonActiveTexture);
+        }
+
+        if (textFieldTexture != null)
+        {
+            Destroy(textFieldTexture);
         }
 
         StopDemoVideo();
@@ -154,33 +330,51 @@ public class MainMenuController : MonoBehaviour
         {
             Destroy(tableAltRowTexture);
         }
+
+        if (iconButtonTexture != null)
+        {
+            Destroy(iconButtonTexture);
+        }
+
+        if (iconButtonHoverTexture != null)
+        {
+            Destroy(iconButtonHoverTexture);
+        }
+
+        if (iconButtonActiveTexture != null)
+        {
+            Destroy(iconButtonActiveTexture);
+        }
+
+        if (speakerIconTexture != null)
+        {
+            Destroy(speakerIconTexture);
+        }
+
+        if (mutedSpeakerIconTexture != null)
+        {
+            Destroy(mutedSpeakerIconTexture);
+        }
     }
 
     // Draws the current main menu view and modal overlays.
     private void OnGUI()
     {
-
         EnsureAudio();
 
         EnsureStyles();
         DrawBackground();
+        DrawAmbientEffects();
         CapturePendingInputKey();
 
-        float maxPanelWidth = currentView == MenuView.Ranking || currentView == MenuView.Demo ? 760f : 520f;
-        float panelWidth = Mathf.Min(maxPanelWidth, Screen.width - 32f);
-        float panelHeight = currentView == MenuView.Ranking || currentView == MenuView.Demo ? 560f : 540f;
-        Rect panelRect = new Rect(
-            (Screen.width - panelWidth) * 0.5f,
-            Mathf.Max(20f, (Screen.height - panelHeight) * 0.5f),
-            panelWidth,
-            panelHeight
-        );
+        Rect panelRect = GetMenuPanelRect();
+        DrawTitle(panelRect);
 
         GUI.Box(panelRect, GUIContent.none, panelStyle);
 
         if (currentView == MenuView.Ranking || currentView == MenuView.Configuration || currentView == MenuView.Demo)
         {
-            Rect closeRect = new Rect(panelRect.xMax - 48f, panelRect.y + 14f, 34f, 34f);
+            Rect closeRect = new Rect(panelRect.xMax - 46f, panelRect.y + 14f, 32f, 32f);
             if (GUI.Button(closeRect, "X", closeButtonStyle))
             {
                 PlayClickSound();
@@ -192,10 +386,8 @@ public class MainMenuController : MonoBehaviour
             }
         }
 
-        Rect contentRect = new Rect(panelRect.x + 28f, panelRect.y + 24f, panelRect.width - 56f, panelRect.height - 48f);
-        DrawTitle(contentRect);
-
-        GUILayout.BeginArea(new Rect(contentRect.x, contentRect.y + 74f, contentRect.width, contentRect.height - 74f));
+        Rect contentRect = new Rect(panelRect.x + 30f, panelRect.y + 28f, panelRect.width - 60f, panelRect.height - 54f);
+        GUILayout.BeginArea(contentRect);
 
         if (currentView == MenuView.Login)
         {
@@ -215,7 +407,7 @@ public class MainMenuController : MonoBehaviour
         }
         else
         {
-            DrawDemo(contentRect.width, contentRect.height - 74f);
+            DrawDemo(contentRect.width, contentRect.height);
         }
 
         GUILayout.EndArea();
@@ -224,32 +416,107 @@ public class MainMenuController : MonoBehaviour
         {
             DrawLoginErrorDialog();
         }
+
+        DrawMenuMuteButton();
     }
 
-    // Draws the game title with a decorative font, subtle shadow, and divider line.
-    private void DrawTitle(Rect contentRect)
+    // Positions compact menu cards so the background character and scenery remain visible.
+    private Rect GetMenuPanelRect()
     {
-        Rect titleRect = new Rect(contentRect.x, contentRect.y, contentRect.width, 52f);
-        Rect shadowRect = new Rect(titleRect.x + 2f, titleRect.y + 3f, titleRect.width, titleRect.height);
+        bool useLargePanel = currentView == MenuView.Ranking || currentView == MenuView.Demo;
+
+        float targetWidth = useLargePanel ? 720f : 370f;
+        float targetHeight = useLargePanel ? 540f : 470f;
+        float panelWidth = Mathf.Min(targetWidth, Screen.width - 32f);
+        float panelHeight = Mathf.Min(targetHeight, Screen.height - 36f);
+
+        float x;
+        if (useLargePanel || Screen.width < 820f)
+        {
+            x = (Screen.width - panelWidth) * 0.5f;
+        }
+        else
+        {
+            x = Screen.width - panelWidth - Mathf.Max(54f, Screen.width * 0.075f);
+        }
+
+        float desiredMinY = Screen.width < 820f ? 96f : 62f;
+        float maxY = Mathf.Max(18f, Screen.height - panelHeight - 18f);
+        float minY = Mathf.Min(desiredMinY, maxY);
+        float y = Mathf.Clamp((Screen.height - panelHeight) * 0.52f, minY, maxY);
+        return new Rect(x, y, panelWidth, panelHeight);
+    }
+
+    // Draws a corner icon button for toggling menu BGM.
+    private void DrawMenuMuteButton()
+    {
+        EnsureMuteButtonIcons();
+
+        Texture2D icon = isMenuBgmMuted ? mutedSpeakerIconTexture : speakerIconTexture;
+        bool hasPanelCloseButton =
+            currentView == MenuView.Ranking ||
+            currentView == MenuView.Configuration ||
+            currentView == MenuView.Demo;
+
+        Rect buttonRect = new Rect(
+            hasPanelCloseButton
+                ? MenuMuteButtonMargin
+                : Screen.width - MenuMuteButtonSize - MenuMuteButtonMargin,
+            MenuMuteButtonMargin,
+            MenuMuteButtonSize,
+            MenuMuteButtonSize
+        );
+
+        if (GUI.Button(buttonRect, new GUIContent(icon), iconButtonStyle))
+        {
+            PlayClickSound();
+            SetMenuBgmMuted(!isMenuBgmMuted);
+        }
+    }
+
+    // Draws the fantasy title treatment over the open background sky.
+    private void DrawTitle(Rect panelRect)
+    {
+        float titleWidth = Mathf.Min(620f, Screen.width - 40f);
+        float titleX = Screen.width >= 820f ? 42f : (Screen.width - titleWidth) * 0.5f;
+        float titleY = Mathf.Max(20f, panelRect.y - 116f);
+        Rect glowRect = new Rect(titleX - 46f, titleY - 30f, titleWidth + 92f, 140f);
+        Rect titleRect = new Rect(titleX, titleY, titleWidth, 70f);
+        Rect shadowRect = new Rect(titleRect.x + 3f, titleRect.y + 4f, titleRect.width, titleRect.height);
+        Rect subtitleRect = new Rect(titleRect.x + 8f, titleRect.yMax - 2f, titleRect.width - 16f, 28f);
+
+        Color oldColor = GUI.color;
+        GUI.color = new Color(1f, 0.92f, 0.52f, 0.36f);
+        GUI.DrawTexture(glowRect, titleGlowTexture, ScaleMode.StretchToFill);
+        GUI.color = oldColor;
 
         GUI.Label(shadowRect, "One More Trap", titleShadowStyle);
         GUI.Label(titleRect, "One More Trap", titleStyle);
-
-        Color oldColor = GUI.color;
-        GUI.color = new Color(0.18f, 0.28f, 0.18f, 0.46f);
-        GUI.DrawTexture(new Rect(contentRect.x + 54f, contentRect.y + 60f, contentRect.width - 108f, 1f), Texture2D.whiteTexture);
-        GUI.color = oldColor;
+        GUI.Label(subtitleRect, "A cozy adventure with suspiciously honest platforms", subtitleStyle);
     }
 
     // Draws login controls and navigation buttons.
     private void DrawLogin()
     {
+        GUILayout.Label("Begin Adventure", labelStyle);
+        GUILayout.Space(8f);
+
+        GUI.enabled = LocalGameDatabase.IsLoggedIn;
+        if (GUILayout.Button("Start Challenge", primaryButtonStyle, GUILayout.Height(58f)))
+        {
+            PlayClickSound();
+            GameStatsTracker.StartChallenge();
+            SceneTransitionController.LoadScene(FirstChallengeSceneIndex);
+        }
+        GUI.enabled = true;
+
+        GUILayout.Space(14f);
         DrawAccountFields();
 
-        GUILayout.Space(18f);
+        GUILayout.Space(12f);
 
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Login", GUILayout.Height(42f)))
+        if (GUILayout.Button("Login", secondaryButtonStyle, GUILayout.Height(42f)))
         {
             PlayClickSound();
 
@@ -268,28 +535,19 @@ public class MainMenuController : MonoBehaviour
             }
         }
 
-        GUI.enabled = LocalGameDatabase.IsLoggedIn;
-        if (GUILayout.Button("Start Challenge", GUILayout.Height(42f)))
-        {
-            PlayClickSound();
-            GameStatsTracker.StartChallenge();
-            SceneTransitionController.LoadScene(FirstChallengeSceneIndex);
-        }
-        GUI.enabled = true;
-        GUILayout.EndHorizontal();
-
-        GUILayout.Space(18f);
-
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Register", GUILayout.Height(36f)))
+        if (GUILayout.Button("Register", secondaryButtonStyle, GUILayout.Height(42f)))
         {
             PlayClickSound();
             currentView = MenuView.Register;
             message = "";
             CloseLoginErrorDialog();
         }
+        GUILayout.EndHorizontal();
 
-        if (GUILayout.Button("Rankings", GUILayout.Height(36f)))
+        GUILayout.Space(14f);
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Rankings", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             PlayClickSound();
 
@@ -298,11 +556,8 @@ public class MainMenuController : MonoBehaviour
             pendingInputAction = null;
             CloseLoginErrorDialog();
         }
-        GUILayout.EndHorizontal();
 
-        GUILayout.Space(8f);
-
-        if (GUILayout.Button("Personalized Configuration", GUILayout.Height(36f)))
+        if (GUILayout.Button("Settings", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             PlayClickSound();
 
@@ -311,11 +566,12 @@ public class MainMenuController : MonoBehaviour
             pendingInputAction = null;
             CloseLoginErrorDialog();
         }
+        GUILayout.EndHorizontal();
 
-        GUILayout.Space(10f);
+        GUILayout.Space(7f);
 
         GUILayout.BeginHorizontal();
-        if (GUILayout.Button("View Demo", GUILayout.Height(34f)))
+        if (GUILayout.Button("View Demo", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             PlayClickSound();
 
@@ -326,25 +582,27 @@ public class MainMenuController : MonoBehaviour
             StartDemoVideo();
         }
 
-        if (GUILayout.Button("Quit Game", GUILayout.Height(34f)))
+        if (GUILayout.Button("Quit Game", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             PlayClickSound();
             QuitGame();
         }
         GUILayout.EndHorizontal();
 
-        GUILayout.Space(14f);
+        GUILayout.Space(12f);
         DrawStatus();
     }
 
     // Draws registration controls.
     private void DrawRegister()
     {
+        GUILayout.Label("Create Account", labelStyle);
+        GUILayout.Space(10f);
         DrawAccountFields();
 
-        GUILayout.Space(12f);
+        GUILayout.Space(14f);
 
-        if (GUILayout.Button("Register", GUILayout.Height(38f)))
+        if (GUILayout.Button("Register", primaryButtonStyle, GUILayout.Height(50f)))
         {
             PlayClickSound();
 
@@ -357,7 +615,9 @@ public class MainMenuController : MonoBehaviour
             }
         }
 
-        if (GUILayout.Button("Back To Login", GUILayout.Height(34f)))
+        GUILayout.Space(10f);
+
+        if (GUILayout.Button("Back To Login", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             PlayClickSound();
 
@@ -366,7 +626,7 @@ public class MainMenuController : MonoBehaviour
             CloseLoginErrorDialog();
         }
 
-        GUILayout.Space(10f);
+        GUILayout.Space(12f);
         DrawStatus();
     }
 
@@ -374,7 +634,7 @@ public class MainMenuController : MonoBehaviour
     private void DrawRanking()
     {
         GUILayout.BeginHorizontal();
-        if (GUILayout.Toggle(rankingView == RankingView.Deaths, "Deaths", "Button", GUILayout.Height(34f)))
+        if (GUILayout.Toggle(rankingView == RankingView.Deaths, "Deaths", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             if (rankingView != RankingView.Deaths)
             {
@@ -383,7 +643,7 @@ public class MainMenuController : MonoBehaviour
 
             rankingView = RankingView.Deaths;
         }
-        if (GUILayout.Toggle(rankingView == RankingView.ClearTime, "Clear Time", "Button", GUILayout.Height(34f)))
+        if (GUILayout.Toggle(rankingView == RankingView.ClearTime, "Clear Time", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             if (rankingView != RankingView.ClearTime)
             {
@@ -392,7 +652,7 @@ public class MainMenuController : MonoBehaviour
 
             rankingView = RankingView.ClearTime;
         }
-        if (GUILayout.Toggle(rankingView == RankingView.DoubleJumps, "Double Jumps", "Button", GUILayout.Height(34f)))
+        if (GUILayout.Toggle(rankingView == RankingView.DoubleJumps, "Double Jumps", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             if (rankingView != RankingView.DoubleJumps)
             {
@@ -431,14 +691,14 @@ public class MainMenuController : MonoBehaviour
 
         GUILayout.Space(12f);
 
-        if (GUILayout.Button("Reset Defaults", GUILayout.Height(34f)))
+        if (GUILayout.Button("Reset Defaults", secondaryButtonStyle, GUILayout.Height(38f)))
         {
             PlayClickSound();
             PlayerInputConfig.ResetDefaults();
             pendingInputAction = null;
         }
 
-        if (GUILayout.Button("Back To Login", GUILayout.Height(34f)))
+        if (GUILayout.Button("Back To Login", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             PlayClickSound();
             currentView = MenuView.Login;
@@ -456,7 +716,7 @@ public class MainMenuController : MonoBehaviour
         {
             GUILayout.Label("Demo video could not be loaded.", demoMessageStyle, GUILayout.Height(44f));
             GUILayout.Space(12f);
-            if (GUILayout.Button("Back To Login", GUILayout.Height(34f)))
+            if (GUILayout.Button("Back To Login", tertiaryButtonStyle, GUILayout.Height(36f)))
             {
                 PlayClickSound();
                 currentView = MenuView.Login;
@@ -466,23 +726,44 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        float videoWidth = contentWidth;
-        float videoHeight = Mathf.Min(contentHeight - 54f, videoWidth * 9f / 16f);
-        Rect videoRect = GUILayoutUtility.GetRect(videoWidth, videoHeight, GUILayout.ExpandWidth(true));
+        const float buttonHeight = 36f;
+        const float buttonWidth = 160f;
+        const float buttonGap = 18f;
+        const float videoVerticalOffset = 24f;
+
+        float availableVideoHeight = Mathf.Max(120f, contentHeight - buttonHeight - buttonGap);
+        float videoWidth = Mathf.Min(contentWidth, availableVideoHeight * 16f / 9f);
+        float videoHeight = videoWidth * 9f / 16f;
+
+        if (videoHeight > availableVideoHeight)
+        {
+            videoHeight = availableVideoHeight;
+            videoWidth = videoHeight * 16f / 9f;
+        }
+
+        float videoX = (contentWidth - videoWidth) * 0.5f;
+        float maxVideoY = Mathf.Max(0f, availableVideoHeight - videoHeight);
+        float videoY = Mathf.Min(
+            maxVideoY,
+            Mathf.Max(0f, (availableVideoHeight - videoHeight) * 0.5f + videoVerticalOffset)
+        );
+        Rect videoRect = new Rect(videoX, videoY, videoWidth, videoHeight);
 
         GUI.DrawTexture(videoRect, demoRenderTexture, ScaleMode.ScaleToFit, false);
 
-        GUILayout.Space(14f);
+        Rect backButtonRect = new Rect(
+            (contentWidth - buttonWidth) * 0.5f,
+            availableVideoHeight + buttonGap,
+            buttonWidth,
+            buttonHeight
+        );
 
-        GUILayout.BeginHorizontal();
-        GUILayout.FlexibleSpace();
-        if (GUILayout.Button("Back To Login", GUILayout.Width(150f), GUILayout.Height(34f)))
+        if (GUI.Button(backButtonRect, "Back To Login", tertiaryButtonStyle))
         {
             PlayClickSound();
             currentView = MenuView.Login;
             StopDemoVideo();
         }
-        GUILayout.EndHorizontal();
     }
 
     // Creates the VideoPlayer and render target used by the demo view.
@@ -555,7 +836,7 @@ public class MainMenuController : MonoBehaviour
             ? "Press a key..."
             : PlayerInputConfig.GetKey(action).ToString();
 
-        if (GUILayout.Button(buttonText, GUILayout.Height(34f)))
+        if (GUILayout.Button(buttonText, secondaryButtonStyle, GUILayout.Height(36f)))
         {
             PlayClickSound();
             pendingInputAction = action;
@@ -569,12 +850,12 @@ public class MainMenuController : MonoBehaviour
     private void DrawAccountFields()
     {
         GUILayout.Label("User Name", labelStyle);
-        userName = GUILayout.TextField(userName, GUILayout.Height(32f));
+        userName = GUILayout.TextField(userName, textFieldStyle, GUILayout.Height(34f));
 
         GUILayout.Space(8f);
 
         GUILayout.Label("Password", labelStyle);
-        password = GUILayout.PasswordField(password, '*', GUILayout.Height(32f));
+        password = GUILayout.PasswordField(password, '*', textFieldStyle, GUILayout.Height(34f));
     }
 
     // Stores the next pressed key for the action currently being configured.
@@ -610,7 +891,7 @@ public class MainMenuController : MonoBehaviour
             ? "Logged in as " + LocalGameDatabase.CurrentUserName
             : "Please login before starting challenge";
 
-        GUILayout.Label(status, labelStyle);
+        GUILayout.Label(status, statusStyle);
 
         if (!string.IsNullOrEmpty(message))
         {
@@ -648,7 +929,7 @@ public class MainMenuController : MonoBehaviour
         GUI.Label(new Rect(dialogRect.x + 20f, dialogRect.y + 18f, dialogRect.width - 40f, 32f), "Login Failed", dialogTitleStyle);
         GUI.Label(new Rect(dialogRect.x + 28f, dialogRect.y + 62f, dialogRect.width - 56f, 42f), loginErrorMessage, dialogTextStyle);
 
-        if (GUI.Button(new Rect(dialogRect.x + 120f, dialogRect.y + 118f, 120f, 34f), "OK"))
+        if (GUI.Button(new Rect(dialogRect.x + 120f, dialogRect.y + 118f, 120f, 34f), "OK", secondaryButtonStyle))
         {
             PlayClickSound();
             CloseLoginErrorDialog();
@@ -738,31 +1019,83 @@ public class MainMenuController : MonoBehaviour
             return;
         }
 
-        panelTexture = CreateTexture(new Color(1f, 0.97f, 0.84f, 0.78f));
+        panelTexture = CreatePanelTexture();
         dialogTexture = CreateTexture(new Color(0.08f, 0.09f, 0.08f, 0.9f));
+        screenShadeTexture = CreateTexture(new Color(0.05f, 0.12f, 0.08f, 0.16f));
+        titleGlowTexture = CreateSoftCircleTexture(128, new Color(1f, 0.9f, 0.45f, 1f));
+        particleTexture = CreateSoftCircleTexture(24, new Color(1f, 0.96f, 0.65f, 1f));
+        leafTexture = CreateLeafTexture();
+        primaryButtonTexture = CreateWoodButtonTexture(new Color(0.62f, 0.33f, 0.13f, 1f), new Color(0.94f, 0.67f, 0.31f, 1f), 1.08f);
+        primaryButtonHoverTexture = CreateWoodButtonTexture(new Color(0.72f, 0.4f, 0.17f, 1f), new Color(1f, 0.76f, 0.38f, 1f), 1.18f);
+        primaryButtonActiveTexture = CreateWoodButtonTexture(new Color(0.46f, 0.24f, 0.1f, 1f), new Color(0.78f, 0.49f, 0.2f, 1f), 0.9f);
+        secondaryButtonTexture = CreateWoodButtonTexture(new Color(0.43f, 0.26f, 0.13f, 1f), new Color(0.78f, 0.55f, 0.3f, 1f), 0.92f);
+        secondaryButtonHoverTexture = CreateWoodButtonTexture(new Color(0.53f, 0.32f, 0.16f, 1f), new Color(0.91f, 0.66f, 0.36f, 1f), 1.03f);
+        secondaryButtonActiveTexture = CreateWoodButtonTexture(new Color(0.34f, 0.2f, 0.1f, 1f), new Color(0.66f, 0.42f, 0.21f, 1f), 0.84f);
+        tertiaryButtonTexture = CreateWoodButtonTexture(new Color(0.28f, 0.38f, 0.24f, 1f), new Color(0.62f, 0.76f, 0.45f, 1f), 0.78f);
+        tertiaryButtonHoverTexture = CreateWoodButtonTexture(new Color(0.34f, 0.46f, 0.28f, 1f), new Color(0.74f, 0.87f, 0.55f, 1f), 0.88f);
+        tertiaryButtonActiveTexture = CreateWoodButtonTexture(new Color(0.2f, 0.29f, 0.18f, 1f), new Color(0.48f, 0.62f, 0.34f, 1f), 0.68f);
+        textFieldTexture = CreateTextFieldTexture();
         tableHeaderTexture = CreateTexture(new Color(0.25f, 0.34f, 0.26f, 0.86f));
         tableRowTexture = CreateTexture(new Color(1f, 1f, 1f, 0.62f));
         tableAltRowTexture = CreateTexture(new Color(0.92f, 0.98f, 0.88f, 0.62f));
+        iconButtonTexture = CreateIconButtonTexture(new Color(1f, 0.96f, 0.76f, 0.92f));
+        iconButtonHoverTexture = CreateIconButtonTexture(new Color(1f, 0.99f, 0.86f, 0.98f));
+        iconButtonActiveTexture = CreateIconButtonTexture(new Color(0.86f, 0.94f, 0.72f, 0.98f));
 
         panelStyle = new GUIStyle(GUI.skin.box);
         panelStyle.normal.background = panelTexture;
+        panelStyle.border = new RectOffset(22, 22, 22, 22);
+        panelStyle.padding = new RectOffset(0, 0, 0, 0);
 
         titleStyle = new GUIStyle(GUI.skin.label);
-        titleStyle.font = Font.CreateDynamicFontFromOSFont(new string[] { "Georgia", "Times New Roman" }, 42);
-        titleStyle.fontSize = 42;
+        titleStyle.font = Font.CreateDynamicFontFromOSFont(new string[] { "Georgia", "Garamond", "Times New Roman" }, 58);
+        titleStyle.fontSize = Screen.width < 820f ? 42 : 58;
         titleStyle.fontStyle = FontStyle.Bold;
-        titleStyle.alignment = TextAnchor.MiddleCenter;
-        titleStyle.normal.textColor = new Color(0.08f, 0.16f, 0.09f);
+        titleStyle.alignment = Screen.width < 820f ? TextAnchor.MiddleCenter : TextAnchor.MiddleLeft;
+        titleStyle.normal.textColor = new Color(0.15f, 0.28f, 0.11f);
 
         titleShadowStyle = new GUIStyle(titleStyle);
-        titleShadowStyle.normal.textColor = new Color(1f, 0.98f, 0.84f, 0.72f);
+        titleShadowStyle.normal.textColor = new Color(1f, 0.95f, 0.62f, 0.92f);
+
+        subtitleStyle = new GUIStyle(GUI.skin.label);
+        subtitleStyle.fontSize = Screen.width < 820f ? 12 : 15;
+        subtitleStyle.fontStyle = FontStyle.Bold;
+        subtitleStyle.alignment = titleStyle.alignment;
+        subtitleStyle.normal.textColor = new Color(0.96f, 0.86f, 0.5f, 0.95f);
 
         labelStyle = new GUIStyle(GUI.skin.label);
+        labelStyle.font = Font.CreateDynamicFontFromOSFont(new string[] { "Verdana", "Arial" }, 15);
         labelStyle.fontSize = 15;
-        labelStyle.normal.textColor = new Color(0.13f, 0.16f, 0.12f);
+        labelStyle.fontStyle = FontStyle.Bold;
+        labelStyle.normal.textColor = new Color(0.18f, 0.16f, 0.1f);
 
         messageStyle = new GUIStyle(labelStyle);
         messageStyle.normal.textColor = new Color(0.55f, 0.25f, 0.04f);
+        messageStyle.wordWrap = true;
+
+        statusStyle = new GUIStyle(labelStyle);
+        statusStyle.fontSize = 13;
+        statusStyle.fontStyle = FontStyle.Normal;
+        statusStyle.alignment = TextAnchor.MiddleCenter;
+        statusStyle.wordWrap = true;
+        statusStyle.normal.textColor = new Color(0.18f, 0.22f, 0.15f);
+
+        primaryButtonStyle = CreateButtonStyle(primaryButtonTexture, primaryButtonHoverTexture, primaryButtonActiveTexture, 19, Color.white);
+        primaryButtonStyle.fontStyle = FontStyle.Bold;
+
+        secondaryButtonStyle = CreateButtonStyle(secondaryButtonTexture, secondaryButtonHoverTexture, secondaryButtonActiveTexture, 15, new Color(1f, 0.97f, 0.82f));
+        tertiaryButtonStyle = CreateButtonStyle(tertiaryButtonTexture, tertiaryButtonHoverTexture, tertiaryButtonActiveTexture, 13, new Color(0.96f, 1f, 0.86f));
+
+        textFieldStyle = new GUIStyle(GUI.skin.textField);
+        textFieldStyle.fontSize = 14;
+        textFieldStyle.alignment = TextAnchor.MiddleLeft;
+        textFieldStyle.padding = new RectOffset(12, 12, 7, 7);
+        textFieldStyle.border = new RectOffset(10, 10, 10, 10);
+        textFieldStyle.normal.background = textFieldTexture;
+        textFieldStyle.focused.background = textFieldTexture;
+        textFieldStyle.hover.background = textFieldTexture;
+        textFieldStyle.normal.textColor = new Color(0.14f, 0.1f, 0.07f);
+        textFieldStyle.focused.textColor = textFieldStyle.normal.textColor;
 
         tableHeaderStyle = new GUIStyle(GUI.skin.label);
         tableHeaderStyle.fontSize = 15;
@@ -786,10 +1119,21 @@ public class MainMenuController : MonoBehaviour
         tableEmptyStyle = new GUIStyle(tableCellStyle);
         tableEmptyStyle.alignment = TextAnchor.MiddleCenter;
 
-        closeButtonStyle = new GUIStyle(GUI.skin.button);
-        closeButtonStyle.fontSize = 18;
+        closeButtonStyle = new GUIStyle(tertiaryButtonStyle);
+        closeButtonStyle.fontSize = 16;
         closeButtonStyle.fontStyle = FontStyle.Bold;
-        closeButtonStyle.normal.textColor = new Color(0.13f, 0.16f, 0.12f);
+
+        iconButtonStyle = new GUIStyle(GUI.skin.button);
+        iconButtonStyle.alignment = TextAnchor.MiddleCenter;
+        iconButtonStyle.padding = new RectOffset(7, 7, 7, 7);
+        iconButtonStyle.margin = new RectOffset(0, 0, 0, 0);
+        iconButtonStyle.normal.background = iconButtonTexture;
+        iconButtonStyle.hover.background = iconButtonHoverTexture;
+        iconButtonStyle.active.background = iconButtonActiveTexture;
+        iconButtonStyle.focused.background = iconButtonHoverTexture;
+        iconButtonStyle.normal.textColor = Color.white;
+        iconButtonStyle.hover.textColor = Color.white;
+        iconButtonStyle.active.textColor = Color.white;
 
         dialogBoxStyle = new GUIStyle(GUI.skin.box);
         dialogBoxStyle.normal.background = dialogTexture;
@@ -811,6 +1155,34 @@ public class MainMenuController : MonoBehaviour
         demoMessageStyle.fontStyle = FontStyle.Bold;
     }
 
+    // Builds a reusable IMGUI button style with generated fantasy textures.
+    private static GUIStyle CreateButtonStyle(Texture2D normal, Texture2D hover, Texture2D active, int fontSize, Color textColor)
+    {
+        GUIStyle style = new GUIStyle(GUI.skin.button);
+        style.fontSize = fontSize;
+        style.alignment = TextAnchor.MiddleCenter;
+        style.padding = new RectOffset(12, 12, 8, 9);
+        style.margin = new RectOffset(3, 3, 3, 3);
+        style.border = new RectOffset(18, 18, 16, 18);
+        style.normal.background = normal;
+        style.hover.background = hover;
+        style.active.background = active;
+        style.focused.background = hover;
+        style.onNormal.background = active;
+        style.onHover.background = hover;
+        style.onActive.background = active;
+        style.onFocused.background = hover;
+        style.normal.textColor = textColor;
+        style.hover.textColor = Color.white;
+        style.active.textColor = new Color(0.94f, 0.84f, 0.58f);
+        style.focused.textColor = Color.white;
+        style.onNormal.textColor = Color.white;
+        style.onHover.textColor = Color.white;
+        style.onActive.textColor = new Color(0.94f, 0.84f, 0.58f);
+        style.onFocused.textColor = Color.white;
+        return style;
+    }
+
     // Creates a 1x1 texture used as a GUI background.
     private static Texture2D CreateTexture(Color color)
     {
@@ -818,6 +1190,404 @@ public class MainMenuController : MonoBehaviour
         texture.SetPixel(0, 0, color);
         texture.Apply();
         return texture;
+    }
+
+    // Creates the parchment-style menu card with soft edges and a drop shadow.
+    private static Texture2D CreatePanelTexture()
+    {
+        const int textureSize = 96;
+        Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color clear = new Color(0f, 0f, 0f, 0f);
+        Color shadow = new Color(0.05f, 0.03f, 0.01f, 0.26f);
+        Color border = new Color(0.42f, 0.27f, 0.12f, 0.88f);
+        Color innerBorder = new Color(1f, 0.91f, 0.58f, 0.55f);
+        Color top = new Color(1f, 0.91f, 0.66f, 0.91f);
+        Color bottom = new Color(0.8f, 0.63f, 0.36f, 0.88f);
+
+        for (int y = 0; y < textureSize; y++)
+        {
+            for (int x = 0; x < textureSize; x++)
+            {
+                texture.SetPixel(x, y, clear);
+
+                if (IsInsideRoundedRect(x, y, 9f, 11f, 78f, 78f, 14f))
+                {
+                    texture.SetPixel(x, y, shadow);
+                }
+
+                bool outer = IsInsideRoundedRect(x, y, 6f, 5f, 80f, 78f, 13f);
+                if (!outer)
+                {
+                    continue;
+                }
+
+                bool inner = IsInsideRoundedRect(x, y, 10f, 9f, 72f, 70f, 10f);
+                if (!inner)
+                {
+                    texture.SetPixel(x, y, border);
+                    continue;
+                }
+
+                float vertical = Mathf.InverseLerp(9f, 79f, y);
+                float grain = Mathf.PerlinNoise(x * 0.18f, y * 0.12f) * 0.055f;
+                Color fill = Color.Lerp(top, bottom, vertical + grain);
+                texture.SetPixel(x, y, fill);
+
+                bool highlight = IsInsideRoundedRect(x, y, 12f, 11f, 68f, 66f, 8f) &&
+                    !IsInsideRoundedRect(x, y, 14f, 13f, 64f, 62f, 7f);
+                if (highlight)
+                {
+                    texture.SetPixel(x, y, innerBorder);
+                }
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    // Creates a sliced wooden button texture with grain, bevel, and shadow.
+    private static Texture2D CreateWoodButtonTexture(Color baseColor, Color highlightColor, float brightness)
+    {
+        const int width = 96;
+        const int height = 48;
+        Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color clear = new Color(0f, 0f, 0f, 0f);
+        Color shadow = new Color(0.04f, 0.02f, 0.01f, 0.34f);
+        Color edge = new Color(0.18f, 0.09f, 0.03f, 1f);
+        Color shine = new Color(1f, 0.92f, 0.58f, 0.35f);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                texture.SetPixel(x, y, clear);
+
+                if (IsInsideRoundedRect(x, y, 5f, 7f, 86f, 36f, 12f))
+                {
+                    texture.SetPixel(x, y, shadow);
+                }
+
+                bool body = IsInsideRoundedRect(x, y, 3f, 3f, 88f, 36f, 12f);
+                if (!body)
+                {
+                    continue;
+                }
+
+                bool inner = IsInsideRoundedRect(x, y, 7f, 7f, 80f, 28f, 9f);
+                if (!inner)
+                {
+                    texture.SetPixel(x, y, edge);
+                    continue;
+                }
+
+                float vertical = Mathf.InverseLerp(7f, 35f, y);
+                float grain = Mathf.PerlinNoise(x * 0.08f, y * 0.42f) * 0.16f;
+                float streak = Mathf.Sin((x + y * 0.35f) * 0.24f) * 0.045f;
+                Color color = Color.Lerp(highlightColor, baseColor, vertical + grain + streak);
+                color = new Color(
+                    Mathf.Clamp01(color.r * brightness),
+                    Mathf.Clamp01(color.g * brightness),
+                    Mathf.Clamp01(color.b * brightness),
+                    color.a
+                );
+                texture.SetPixel(x, y, color);
+
+                if (y >= 8 && y <= 12 && x >= 14 && x <= 82)
+                {
+                    texture.SetPixel(x, y, Color.Lerp(texture.GetPixel(x, y), shine, 0.45f));
+                }
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    // Creates a warm input field texture that fits the fantasy card.
+    private static Texture2D CreateTextFieldTexture()
+    {
+        const int width = 64;
+        const int height = 40;
+        Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color clear = new Color(0f, 0f, 0f, 0f);
+        Color border = new Color(0.4f, 0.25f, 0.11f, 0.9f);
+        Color fill = new Color(1f, 0.94f, 0.72f, 0.88f);
+
+        for (int y = 0; y < height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                texture.SetPixel(x, y, clear);
+
+                bool outer = IsInsideRoundedRect(x, y, 2f, 3f, 60f, 32f, 8f);
+                if (!outer)
+                {
+                    continue;
+                }
+
+                bool inner = IsInsideRoundedRect(x, y, 5f, 6f, 54f, 26f, 6f);
+                texture.SetPixel(x, y, inner ? fill : border);
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    // Creates a soft circular texture used for bloom and drifting motes.
+    private static Texture2D CreateSoftCircleTexture(int textureSize, Color tint)
+    {
+        Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Vector2 center = new Vector2((textureSize - 1) * 0.5f, (textureSize - 1) * 0.5f);
+        float radius = textureSize * 0.5f;
+
+        for (int y = 0; y < textureSize; y++)
+        {
+            for (int x = 0; x < textureSize; x++)
+            {
+                float distance = Vector2.Distance(new Vector2(x, y), center) / radius;
+                float alpha = Mathf.SmoothStep(1f, 0f, distance);
+                texture.SetPixel(x, y, new Color(tint.r, tint.g, tint.b, tint.a * alpha));
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    // Creates a small leaf texture for lightweight ambient motion.
+    private static Texture2D CreateLeafTexture()
+    {
+        const int textureSize = 32;
+        Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color clear = new Color(0f, 0f, 0f, 0f);
+        Color leaf = new Color(0.34f, 0.58f, 0.18f, 0.85f);
+        Color vein = new Color(0.78f, 0.86f, 0.34f, 0.9f);
+
+        for (int y = 0; y < textureSize; y++)
+        {
+            for (int x = 0; x < textureSize; x++)
+            {
+                texture.SetPixel(x, y, clear);
+
+                float nx = (x - 16f - (y - 16f) * 0.38f) / 12f;
+                float ny = (y - 16f) / 6f;
+                if (nx * nx + ny * ny <= 1f)
+                {
+                    texture.SetPixel(x, y, leaf);
+                }
+
+                if (Mathf.Abs(y - 16f) <= 1f && x >= 8 && x <= 24)
+                {
+                    texture.SetPixel(x, y, vein);
+                }
+            }
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    // Tests whether a generated texture pixel falls inside a rounded rectangle.
+    private static bool IsInsideRoundedRect(float x, float y, float left, float top, float width, float height, float radius)
+    {
+        if (x < left || y < top || x >= left + width || y >= top + height)
+        {
+            return false;
+        }
+
+        float closestX = Mathf.Clamp(x, left + radius, left + width - radius - 1f);
+        float closestY = Mathf.Clamp(y, top + radius, top + height - radius - 1f);
+        float dx = x - closestX;
+        float dy = y - closestY;
+        return dx * dx + dy * dy <= radius * radius;
+    }
+
+    // Creates a high-contrast square backing for icon-only menu controls.
+    private static Texture2D CreateIconButtonTexture(Color fillColor)
+    {
+        const int textureSize = 32;
+        Texture2D texture = new Texture2D(textureSize, textureSize, TextureFormat.RGBA32, false);
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color clear = new Color(0f, 0f, 0f, 0f);
+        Color borderColor = new Color(0.08f, 0.16f, 0.09f, 0.75f);
+        Color shadowColor = new Color(0f, 0f, 0f, 0.22f);
+
+        for (int y = 0; y < textureSize; y++)
+        {
+            for (int x = 0; x < textureSize; x++)
+            {
+                texture.SetPixel(x, y, clear);
+            }
+        }
+
+        FillRect(texture, 4, 5, 25, 24, shadowColor);
+        FillRect(texture, 3, 3, 26, 25, fillColor);
+        FillRect(texture, 3, 3, 26, 2, borderColor);
+        FillRect(texture, 3, 26, 26, 2, borderColor);
+        FillRect(texture, 3, 3, 2, 25, borderColor);
+        FillRect(texture, 27, 3, 2, 25, borderColor);
+
+        texture.Apply();
+        return texture;
+    }
+
+    // Builds speaker icons at runtime so the mute control does not depend on text.
+    private void EnsureMuteButtonIcons()
+    {
+        if (speakerIconTexture == null)
+        {
+            speakerIconTexture = CreateSpeakerIcon(false);
+        }
+
+        if (mutedSpeakerIconTexture == null)
+        {
+            mutedSpeakerIconTexture = CreateSpeakerIcon(true);
+        }
+    }
+
+    // Creates a compact speaker or muted-speaker texture for the menu corner button.
+    private static Texture2D CreateSpeakerIcon(bool muted)
+    {
+        const int iconSize = 64;
+        Texture2D texture = new Texture2D(iconSize, iconSize, TextureFormat.RGBA32, false);
+        texture.name = muted ? "MenuMutedSpeakerIcon" : "MenuSpeakerIcon";
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.filterMode = FilterMode.Bilinear;
+
+        Color clear = new Color(0f, 0f, 0f, 0f);
+        Color speakerColor = new Color(0.02f, 0.08f, 0.04f, 1f);
+        Color muteColor = new Color(0.72f, 0.08f, 0.04f, 1f);
+
+        for (int y = 0; y < iconSize; y++)
+        {
+            for (int x = 0; x < iconSize; x++)
+            {
+                texture.SetPixel(x, y, clear);
+            }
+        }
+
+        FillRect(texture, 11, 24, 13, 16, speakerColor);
+        FillTriangle(texture, new Vector2(24f, 24f), new Vector2(40f, 12f), new Vector2(40f, 52f), speakerColor);
+
+        if (muted)
+        {
+            DrawThickLine(texture, new Vector2(46f, 22f), new Vector2(58f, 42f), muteColor, 5f);
+            DrawThickLine(texture, new Vector2(58f, 22f), new Vector2(46f, 42f), muteColor, 5f);
+        }
+        else
+        {
+            DrawThickLine(texture, new Vector2(44f, 25f), new Vector2(51f, 19f), speakerColor, 4f);
+            DrawThickLine(texture, new Vector2(44f, 39f), new Vector2(51f, 45f), speakerColor, 4f);
+            DrawThickLine(texture, new Vector2(50f, 21f), new Vector2(58f, 14f), speakerColor, 3f);
+            DrawThickLine(texture, new Vector2(50f, 43f), new Vector2(58f, 50f), speakerColor, 3f);
+        }
+
+        texture.Apply();
+        return texture;
+    }
+
+    // Fills a rectangle on a generated icon texture.
+    private static void FillRect(Texture2D texture, int x, int y, int width, int height, Color color)
+    {
+        for (int py = y; py < y + height; py++)
+        {
+            for (int px = x; px < x + width; px++)
+            {
+                texture.SetPixel(px, py, color);
+            }
+        }
+    }
+
+    // Fills a triangle on a generated icon texture.
+    private static void FillTriangle(Texture2D texture, Vector2 a, Vector2 b, Vector2 c, Color color)
+    {
+        int minX = Mathf.FloorToInt(Mathf.Min(a.x, Mathf.Min(b.x, c.x)));
+        int maxX = Mathf.CeilToInt(Mathf.Max(a.x, Mathf.Max(b.x, c.x)));
+        int minY = Mathf.FloorToInt(Mathf.Min(a.y, Mathf.Min(b.y, c.y)));
+        int maxY = Mathf.CeilToInt(Mathf.Max(a.y, Mathf.Max(b.y, c.y)));
+
+        for (int y = minY; y <= maxY; y++)
+        {
+            for (int x = minX; x <= maxX; x++)
+            {
+                Vector2 point = new Vector2(x + 0.5f, y + 0.5f);
+
+                if (IsPointInsideTriangle(point, a, b, c))
+                {
+                    texture.SetPixel(x, y, color);
+                }
+            }
+        }
+    }
+
+    // Draws a thick line segment on a generated icon texture.
+    private static void DrawThickLine(Texture2D texture, Vector2 start, Vector2 end, Color color, float thickness)
+    {
+        int minX = Mathf.FloorToInt(Mathf.Min(start.x, end.x) - thickness);
+        int maxX = Mathf.CeilToInt(Mathf.Max(start.x, end.x) + thickness);
+        int minY = Mathf.FloorToInt(Mathf.Min(start.y, end.y) - thickness);
+        int maxY = Mathf.CeilToInt(Mathf.Max(start.y, end.y) + thickness);
+        Vector2 line = end - start;
+        float lineLengthSquared = line.sqrMagnitude;
+
+        for (int y = minY; y <= maxY; y++)
+        {
+            for (int x = minX; x <= maxX; x++)
+            {
+                if (x < 0 || y < 0 || x >= texture.width || y >= texture.height)
+                {
+                    continue;
+                }
+
+                Vector2 point = new Vector2(x + 0.5f, y + 0.5f);
+                float t = Mathf.Clamp01(Vector2.Dot(point - start, line) / lineLengthSquared);
+                Vector2 closest = start + line * t;
+
+                if (Vector2.Distance(point, closest) <= thickness * 0.5f)
+                {
+                    texture.SetPixel(x, y, color);
+                }
+            }
+        }
+    }
+
+    // Tests whether a point is inside a triangle using signed areas.
+    private static bool IsPointInsideTriangle(Vector2 point, Vector2 a, Vector2 b, Vector2 c)
+    {
+        float area1 = TriangleSign(point, a, b);
+        float area2 = TriangleSign(point, b, c);
+        float area3 = TriangleSign(point, c, a);
+
+        bool hasNegative = area1 < 0f || area2 < 0f || area3 < 0f;
+        bool hasPositive = area1 > 0f || area2 > 0f || area3 > 0f;
+
+        return !(hasNegative && hasPositive);
+    }
+
+    // Calculates the signed area helper used by triangle rasterization.
+    private static float TriangleSign(Vector2 p1, Vector2 p2, Vector2 p3)
+    {
+        return (p1.x - p3.x) * (p2.y - p3.y) -
+            (p2.x - p3.x) * (p1.y - p3.y);
     }
 
     // Draws the configured background texture as a cover image.
@@ -830,6 +1600,50 @@ public class MainMenuController : MonoBehaviour
 
         Rect targetRect = GetCoverRect(backgroundTexture.width, backgroundTexture.height);
         GUI.DrawTexture(targetRect, backgroundTexture, ScaleMode.StretchToFill);
+
+        Color oldColor = GUI.color;
+        GUI.color = Color.white;
+        GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), screenShadeTexture, ScaleMode.StretchToFill);
+
+        GUI.color = new Color(1f, 0.92f, 0.42f, 0.2f);
+        GUI.DrawTexture(new Rect(Screen.width * 0.18f, Screen.height * 0.08f, Screen.width * 0.46f, Screen.height * 0.42f), titleGlowTexture, ScaleMode.StretchToFill);
+        GUI.color = oldColor;
+    }
+
+    // Draws lightweight ambient motes and drifting leaves over the illustrated background.
+    private void DrawAmbientEffects()
+    {
+        float time = Time.realtimeSinceStartup;
+        Color oldColor = GUI.color;
+        Matrix4x4 oldMatrix = GUI.matrix;
+
+        for (int i = 0; i < 18; i++)
+        {
+            float seed = i * 37.137f;
+            float x = Mathf.Repeat(seed * 41f + time * (10f + i * 0.6f), Screen.width + 80f) - 40f;
+            float y = Mathf.Repeat(seed * 19f - time * (5f + i * 0.22f), Screen.height * 0.72f) + Screen.height * 0.08f;
+            float pulse = 0.45f + Mathf.Sin(time * 1.8f + seed) * 0.2f;
+            float size = 5f + (i % 4) * 2.4f;
+
+            GUI.color = new Color(1f, 0.94f, 0.58f, 0.16f + pulse * 0.18f);
+            GUI.DrawTexture(new Rect(x, y, size, size), particleTexture, ScaleMode.StretchToFill);
+        }
+
+        for (int i = 0; i < 6; i++)
+        {
+            float seed = i * 53.91f;
+            float x = Mathf.Repeat(seed * 31f + time * (18f + i * 1.5f), Screen.width + 90f) - 45f;
+            float y = Screen.height * (0.18f + i * 0.08f) + Mathf.Sin(time * 0.9f + seed) * 18f;
+            float size = 13f + (i % 3) * 4f;
+
+            GUI.matrix = oldMatrix;
+            GUIUtility.RotateAroundPivot(Mathf.Sin(time + seed) * 12f, new Vector2(x + size * 0.5f, y + size * 0.5f));
+            GUI.color = new Color(0.42f, 0.68f, 0.2f, 0.36f);
+            GUI.DrawTexture(new Rect(x, y, size, size), leafTexture, ScaleMode.ScaleToFit);
+        }
+
+        GUI.matrix = oldMatrix;
+        GUI.color = oldColor;
     }
 
     // Calculates a cover-fit rectangle for the background image.
