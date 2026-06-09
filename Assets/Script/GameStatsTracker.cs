@@ -18,6 +18,7 @@ public class GameStatsTracker : MonoBehaviour
 
     private float totalStartTime;
     private float levelStartTime;
+    private float completedClearTimeSeconds;
     private int currentLevelDeaths;
     private int totalDeaths;
     private int currentLevelDoubleJumps;
@@ -30,6 +31,7 @@ public class GameStatsTracker : MonoBehaviour
     private bool showHud;
     private bool showExitConfirm;
     private bool showSaveRecordConfirm;
+    private bool showVisitorCompleteDialog;
     private float timeScaleBeforeDialog = 1f;
     private ChallengeRecord pendingRecord;
 
@@ -155,6 +157,7 @@ public class GameStatsTracker : MonoBehaviour
             showHud = false;
             showExitConfirm = false;
             showSaveRecordConfirm = false;
+            showVisitorCompleteDialog = false;
             currentSceneKey = GetSceneKey(scene);
             return;
         }
@@ -198,9 +201,11 @@ public class GameStatsTracker : MonoBehaviour
         showHud = false;
         showExitConfirm = false;
         showSaveRecordConfirm = false;
+        showVisitorCompleteDialog = false;
         pendingRecord = null;
         totalStartTime = Time.unscaledTime;
         levelStartTime = Time.unscaledTime;
+        completedClearTimeSeconds = 0f;
         currentLevelDeaths = 0;
         totalDeaths = 0;
         currentLevelDoubleJumps = 0;
@@ -219,8 +224,15 @@ public class GameStatsTracker : MonoBehaviour
         challengeCompleted = true;
         challengeActive = false;
         showHud = false;
+        completedClearTimeSeconds = Mathf.Max(0f, Time.unscaledTime - totalStartTime);
 
-        if (visitorMode || !LocalGameDatabase.IsLoggedIn)
+        if (visitorMode)
+        {
+            OpenVisitorCompleteDialog();
+            return;
+        }
+
+        if (!LocalGameDatabase.IsLoggedIn)
         {
             SceneTransitionController.LoadScene(MainMenuSceneName);
             return;
@@ -229,7 +241,7 @@ public class GameStatsTracker : MonoBehaviour
         pendingRecord = new ChallengeRecord();
         pendingRecord.challengerName = LocalGameDatabase.CurrentUserName;
         pendingRecord.totalDeaths = totalDeaths;
-        pendingRecord.clearTimeSeconds = Mathf.Max(0f, Time.unscaledTime - totalStartTime);
+        pendingRecord.clearTimeSeconds = completedClearTimeSeconds;
         pendingRecord.doubleJumpUses = totalDoubleJumps;
         pendingRecord.completedAtBeijing = DateTime.UtcNow.AddHours(8).ToString("yyyy-MM-dd HH:mm:ss");
 
@@ -269,7 +281,7 @@ public class GameStatsTracker : MonoBehaviour
     // Draws the HUD and modal dialogs for challenge progress.
     private void OnGUI()
     {
-        if (!showHud && !showExitConfirm && !showSaveRecordConfirm)
+        if (!showHud && !showExitConfirm && !showSaveRecordConfirm && !showVisitorCompleteDialog)
         {
             return;
         }
@@ -319,6 +331,11 @@ public class GameStatsTracker : MonoBehaviour
         {
             DrawSaveRecordConfirmDialog();
         }
+
+        if (showVisitorCompleteDialog)
+        {
+            DrawVisitorCompleteDialog();
+        }
     }
 
     private void OpenExitConfirmDialog()
@@ -330,6 +347,12 @@ public class GameStatsTracker : MonoBehaviour
     private void OpenSaveRecordConfirmDialog()
     {
         showSaveRecordConfirm = true;
+        PauseForDialog();
+    }
+
+    private void OpenVisitorCompleteDialog()
+    {
+        showVisitorCompleteDialog = true;
         PauseForDialog();
     }
 
@@ -404,6 +427,7 @@ public class GameStatsTracker : MonoBehaviour
         dialogTextStyle = new GUIStyle(GUI.skin.label);
         dialogTextStyle.fontSize = 16;
         dialogTextStyle.alignment = TextAnchor.MiddleCenter;
+        dialogTextStyle.wordWrap = true;
         dialogTextStyle.normal.textColor = Color.white;
     }
 
@@ -532,6 +556,7 @@ public class GameStatsTracker : MonoBehaviour
             visitorMode = false;
             showExitConfirm = false;
             showSaveRecordConfirm = false;
+            showVisitorCompleteDialog = false;
             pendingRecord = null;
             ResumeAfterDialog();
             SceneTransitionController.LoadScene(MainMenuSceneName);
@@ -573,6 +598,32 @@ public class GameStatsTracker : MonoBehaviour
 
             pendingRecord = null;
             showSaveRecordConfirm = false;
+            ResumeAfterDialog();
+            SceneTransitionController.LoadScene(MainMenuSceneName);
+        }
+    }
+
+    // Draws the visitor-mode clear dialog before returning to the main menu.
+    private void DrawVisitorCompleteDialog()
+    {
+        Rect dialogRect = GetCenteredDialogRect(480f, 220f);
+        GUI.Box(dialogRect, GUIContent.none, dialogBoxStyle);
+        GUI.Label(new Rect(dialogRect.x + 20f, dialogRect.y + 20f, dialogRect.width - 40f, 34f), "Congratulations!", dialogTitleStyle);
+
+        string clearText =
+            "You cleared all " + TotalChallengeLevels + " levels in Visitor Mode.\n" +
+            "Time: " + FormatTime(completedClearTimeSeconds) +
+            "   Deaths: " + totalDeaths +
+            "   Double Jumps: " + totalDoubleJumps + "\n" +
+            "Visitor runs are not saved to rankings.";
+
+        GUI.Label(new Rect(dialogRect.x + 28f, dialogRect.y + 66f, dialogRect.width - 56f, 82f), clearText, dialogTextStyle);
+
+        if (GUI.Button(new Rect(dialogRect.x + 160f, dialogRect.y + 166f, 160f, 34f), "Back To Menu"))
+        {
+            visitorMode = false;
+            showVisitorCompleteDialog = false;
+            pendingRecord = null;
             ResumeAfterDialog();
             SceneTransitionController.LoadScene(MainMenuSceneName);
         }
