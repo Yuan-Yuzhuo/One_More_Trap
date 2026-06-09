@@ -75,7 +75,7 @@ The smallest playable version of this project is a single level where the player
 | Level | Scene | Focus |
 | --- | --- | --- |
 | 1 | `1.Beginning` | Falling traps and unstable ground |
-| 2 | `2.MovingSpike` / `Hurdle2` | Spike avoidance |
+| 2 | `2.MovingSpike` | Spike avoidance |
 | 3 | `3.3MovingSpkies` | Moving spike timing |
 | 4 | `4.2MovingSpikes` | Platform timing and spike pressure |
 | 5 | `5.ChasingSpikes` | Dash usage against chasing hazards |
