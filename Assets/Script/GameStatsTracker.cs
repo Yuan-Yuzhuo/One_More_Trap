@@ -26,6 +26,7 @@ public class GameStatsTracker : MonoBehaviour
     private string currentSceneKey = "";
     private bool challengeActive;
     private bool challengeCompleted;
+    private bool visitorMode;
     private bool showHud;
     private bool showExitConfirm;
     private bool showSaveRecordConfirm;
@@ -54,7 +55,13 @@ public class GameStatsTracker : MonoBehaviour
     public static void StartChallenge()
     {
         EnsureInstance();
-        instance.StartChallengeInternal();
+        instance.StartChallengeInternal(false);
+    }
+
+    public static void StartVisitorChallenge()
+    {
+        EnsureInstance();
+        instance.StartChallengeInternal(true);
     }
 
     public static void CompleteChallenge()
@@ -154,7 +161,7 @@ public class GameStatsTracker : MonoBehaviour
 
         if (!challengeActive)
         {
-            StartChallengeInternal();
+            StartChallengeInternal(false);
         }
 
         string sceneKey = GetSceneKey(scene);
@@ -183,10 +190,11 @@ public class GameStatsTracker : MonoBehaviour
     }
 
     // Clears all challenge counters and starts a fresh run.
-    private void StartChallengeInternal()
+    private void StartChallengeInternal(bool isVisitorMode)
     {
         challengeActive = true;
         challengeCompleted = false;
+        visitorMode = isVisitorMode;
         showHud = false;
         showExitConfirm = false;
         showSaveRecordConfirm = false;
@@ -212,7 +220,7 @@ public class GameStatsTracker : MonoBehaviour
         challengeActive = false;
         showHud = false;
 
-        if (!LocalGameDatabase.IsLoggedIn)
+        if (visitorMode || !LocalGameDatabase.IsLoggedIn)
         {
             SceneTransitionController.LoadScene(MainMenuSceneName);
             return;
@@ -233,7 +241,7 @@ public class GameStatsTracker : MonoBehaviour
     {
         if (!challengeActive)
         {
-            StartChallengeInternal();
+            StartChallengeInternal(false);
         }
 
         if (lastDeathFrame == Time.frameCount)
@@ -251,7 +259,7 @@ public class GameStatsTracker : MonoBehaviour
     {
         if (!challengeActive)
         {
-            StartChallengeInternal();
+            StartChallengeInternal(false);
         }
 
         currentLevelDoubleJumps++;
@@ -521,6 +529,7 @@ public class GameStatsTracker : MonoBehaviour
         {
             challengeActive = false;
             challengeCompleted = false;
+            visitorMode = false;
             showExitConfirm = false;
             showSaveRecordConfirm = false;
             pendingRecord = null;

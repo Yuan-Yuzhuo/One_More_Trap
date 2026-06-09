@@ -28,7 +28,8 @@ public class MainMenuController : MonoBehaviour
 
     private enum MenuView
     {
-        Login,
+        Home,
+        FormalMode,
         Register,
         Ranking,
         Configuration,
@@ -42,7 +43,7 @@ public class MainMenuController : MonoBehaviour
         DoubleJumps
     }
 
-    private MenuView currentView = MenuView.Login;
+    private MenuView currentView = MenuView.Home;
     private RankingView rankingView = RankingView.Deaths;
     private PlayerInputAction? pendingInputAction = null;
     private bool hasLoadedMenuBgmMutePreference = false;
@@ -57,6 +58,7 @@ public class MainMenuController : MonoBehaviour
     private GUIStyle titleStyle;
     private GUIStyle titleShadowStyle;
     private GUIStyle subtitleStyle;
+    private GUIStyle subtitleShadowStyle;
     private GUIStyle labelStyle;
     private GUIStyle messageStyle;
     private GUIStyle statusStyle;
@@ -371,6 +373,7 @@ public class MainMenuController : MonoBehaviour
         DrawTitle(panelRect);
 
         GUI.Box(panelRect, GUIContent.none, panelStyle);
+        DrawPanelAmbientOverlay(panelRect);
 
         if (currentView == MenuView.Ranking || currentView == MenuView.Configuration || currentView == MenuView.Demo)
         {
@@ -378,7 +381,7 @@ public class MainMenuController : MonoBehaviour
             if (GUI.Button(closeRect, "X", closeButtonStyle))
             {
                 PlayClickSound();
-                currentView = MenuView.Login;
+                currentView = MenuView.Home;
                 message = "";
                 pendingInputAction = null;
                 StopDemoVideo();
@@ -389,9 +392,13 @@ public class MainMenuController : MonoBehaviour
         Rect contentRect = new Rect(panelRect.x + 30f, panelRect.y + 28f, panelRect.width - 60f, panelRect.height - 54f);
         GUILayout.BeginArea(contentRect);
 
-        if (currentView == MenuView.Login)
+        if (currentView == MenuView.Home)
         {
-            DrawLogin();
+            DrawHome();
+        }
+        else if (currentView == MenuView.FormalMode)
+        {
+            DrawFormalMode();
         }
         else if (currentView == MenuView.Register)
         {
@@ -426,7 +433,12 @@ public class MainMenuController : MonoBehaviour
         bool useLargePanel = currentView == MenuView.Ranking || currentView == MenuView.Demo;
 
         float targetWidth = useLargePanel ? 720f : 370f;
-        float targetHeight = useLargePanel ? 540f : 470f;
+        float targetHeight =
+            useLargePanel
+                ? 540f
+                : currentView == MenuView.Home
+                    ? 420f
+                    : 510f;
         float panelWidth = Mathf.Min(targetWidth, Screen.width - 32f);
         float panelHeight = Mathf.Min(targetHeight, Screen.height - 36f);
 
@@ -474,46 +486,146 @@ public class MainMenuController : MonoBehaviour
         }
     }
 
+    // Adds a soft animated sheen over the parchment panel without covering the controls.
+    private void DrawPanelAmbientOverlay(Rect panelRect)
+    {
+        float time = Time.realtimeSinceStartup;
+        Color oldColor = GUI.color;
+
+        float warmPulse = 0.07f + Mathf.Sin(time * 0.9f) * 0.018f;
+        GUI.color = new Color(1f, 0.9f, 0.48f, warmPulse);
+        GUI.DrawTexture(
+            new Rect(panelRect.x + 18f, panelRect.y + 12f, panelRect.width - 36f, 58f),
+            titleGlowTexture,
+            ScaleMode.StretchToFill
+        );
+
+        float sweep = Mathf.Repeat(time * 0.13f, 1f);
+        Rect sweepRect = new Rect(
+            panelRect.x + sweep * (panelRect.width + 90f) - 100f,
+            panelRect.y + 10f,
+            90f,
+            panelRect.height - 20f
+        );
+        GUI.color = new Color(1f, 1f, 0.78f, 0.035f);
+        GUI.DrawTexture(sweepRect, titleGlowTexture, ScaleMode.StretchToFill);
+
+        GUI.color = oldColor;
+    }
+
     // Draws the fantasy title treatment over the open background sky.
     private void DrawTitle(Rect panelRect)
     {
+        float time = Time.realtimeSinceStartup;
+        float glowPulse = 0.3f + Mathf.Sin(time * 1.25f) * 0.08f;
         float titleWidth = Mathf.Min(620f, Screen.width - 40f);
         float titleX = Screen.width >= 820f ? 42f : (Screen.width - titleWidth) * 0.5f;
         float titleY = Mathf.Max(20f, panelRect.y - 116f);
-        Rect glowRect = new Rect(titleX - 46f, titleY - 30f, titleWidth + 92f, 140f);
+        Rect glowRect = new Rect(titleX - 54f, titleY - 34f, titleWidth + 108f, 148f);
         Rect titleRect = new Rect(titleX, titleY, titleWidth, 70f);
         Rect shadowRect = new Rect(titleRect.x + 3f, titleRect.y + 4f, titleRect.width, titleRect.height);
         Rect subtitleRect = new Rect(titleRect.x + 8f, titleRect.yMax - 2f, titleRect.width - 16f, 28f);
+        Rect subtitleShadowRect = new Rect(subtitleRect.x + 2f, subtitleRect.y + 2f, subtitleRect.width, subtitleRect.height);
 
         Color oldColor = GUI.color;
-        GUI.color = new Color(1f, 0.92f, 0.52f, 0.36f);
+        GUI.color = new Color(1f, 0.92f, 0.52f, glowPulse);
         GUI.DrawTexture(glowRect, titleGlowTexture, ScaleMode.StretchToFill);
         GUI.color = oldColor;
 
         GUI.Label(shadowRect, "One More Trap", titleShadowStyle);
         GUI.Label(titleRect, "One More Trap", titleStyle);
+        GUI.Label(subtitleShadowRect, "A cozy adventure with suspiciously honest platforms", subtitleShadowStyle);
         GUI.Label(subtitleRect, "A cozy adventure with suspiciously honest platforms", subtitleStyle);
     }
 
-    // Draws login controls and navigation buttons.
-    private void DrawLogin()
+    // Draws the first menu layer with the four primary navigation choices.
+    private void DrawHome()
     {
-        GUILayout.Label("Begin Adventure", labelStyle);
-        GUILayout.Space(8f);
+        GUILayout.FlexibleSpace();
 
-        GUI.enabled = LocalGameDatabase.IsLoggedIn;
-        if (GUILayout.Button("Start Challenge", primaryButtonStyle, GUILayout.Height(58f)))
+        if (GUILayout.Button("Visitor Mode", primaryButtonStyle, GUILayout.Height(70f)))
         {
             PlayClickSound();
-            GameStatsTracker.StartChallenge();
+            GameStatsTracker.StartVisitorChallenge();
             SceneTransitionController.LoadScene(FirstChallengeSceneIndex);
         }
-        GUI.enabled = true;
-
-        GUILayout.Space(14f);
-        DrawAccountFields();
 
         GUILayout.Space(12f);
+
+        if (GUILayout.Button("Formal Mode", secondaryButtonStyle, GUILayout.Height(58f)))
+        {
+            PlayClickSound();
+            currentView = MenuView.FormalMode;
+            message = "";
+            CloseLoginErrorDialog();
+        }
+
+        GUILayout.Space(10f);
+
+        if (GUILayout.Button("Rankings", secondaryButtonStyle, GUILayout.Height(52f)))
+        {
+            PlayClickSound();
+            currentView = MenuView.Ranking;
+            message = "";
+            pendingInputAction = null;
+            CloseLoginErrorDialog();
+        }
+
+        GUILayout.Space(10f);
+
+        if (GUILayout.Button("Settings", secondaryButtonStyle, GUILayout.Height(52f)))
+        {
+            PlayClickSound();
+            currentView = MenuView.Configuration;
+            message = "";
+            pendingInputAction = null;
+            CloseLoginErrorDialog();
+        }
+
+        GUILayout.Space(10f);
+
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("View Demo", tertiaryButtonStyle, GUILayout.Height(48f)))
+        {
+            PlayClickSound();
+            currentView = MenuView.Demo;
+            message = "";
+            pendingInputAction = null;
+            CloseLoginErrorDialog();
+            StartDemoVideo();
+        }
+
+        if (GUILayout.Button("Quit Game", tertiaryButtonStyle, GUILayout.Height(48f)))
+        {
+            PlayClickSound();
+            QuitGame();
+        }
+        GUILayout.EndHorizontal();
+
+        GUILayout.FlexibleSpace();
+    }
+
+    // Draws formal challenge login, registration, and ranked start controls.
+    private void DrawFormalMode()
+    {
+        GUILayout.BeginHorizontal();
+        if (GUILayout.Button("Back To Main Menu", tertiaryButtonStyle, GUILayout.Width(170f), GUILayout.Height(34f)))
+        {
+            PlayClickSound();
+            currentView = MenuView.Home;
+            message = "";
+            CloseLoginErrorDialog();
+        }
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+
+        GUILayout.Space(8f);
+        GUILayout.Label("Formal Mode", labelStyle);
+        GUILayout.Space(10f);
+
+        DrawAccountFields();
+
+        GUILayout.Space(10f);
 
         GUILayout.BeginHorizontal();
         if (GUILayout.Button("Login", secondaryButtonStyle, GUILayout.Height(42f)))
@@ -544,52 +656,18 @@ public class MainMenuController : MonoBehaviour
         }
         GUILayout.EndHorizontal();
 
-        GUILayout.Space(14f);
-
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("Rankings", tertiaryButtonStyle, GUILayout.Height(36f)))
-        {
-            PlayClickSound();
-
-            currentView = MenuView.Ranking;
-            message = "";
-            pendingInputAction = null;
-            CloseLoginErrorDialog();
-        }
-
-        if (GUILayout.Button("Settings", tertiaryButtonStyle, GUILayout.Height(36f)))
-        {
-            PlayClickSound();
-
-            currentView = MenuView.Configuration;
-            message = "";
-            pendingInputAction = null;
-            CloseLoginErrorDialog();
-        }
-        GUILayout.EndHorizontal();
-
-        GUILayout.Space(7f);
-
-        GUILayout.BeginHorizontal();
-        if (GUILayout.Button("View Demo", tertiaryButtonStyle, GUILayout.Height(36f)))
-        {
-            PlayClickSound();
-
-            currentView = MenuView.Demo;
-            message = "";
-            pendingInputAction = null;
-            CloseLoginErrorDialog();
-            StartDemoVideo();
-        }
-
-        if (GUILayout.Button("Quit Game", tertiaryButtonStyle, GUILayout.Height(36f)))
-        {
-            PlayClickSound();
-            QuitGame();
-        }
-        GUILayout.EndHorizontal();
-
         GUILayout.Space(12f);
+
+        GUI.enabled = LocalGameDatabase.IsLoggedIn;
+        if (GUILayout.Button("Start Challenge", primaryButtonStyle, GUILayout.Height(54f)))
+        {
+            PlayClickSound();
+            GameStatsTracker.StartChallenge();
+            SceneTransitionController.LoadScene(FirstChallengeSceneIndex);
+        }
+        GUI.enabled = true;
+
+        GUILayout.Space(10f);
         DrawStatus();
     }
 
@@ -611,7 +689,7 @@ public class MainMenuController : MonoBehaviour
 
             if (result == RegisterResult.Success)
             {
-                currentView = MenuView.Login;
+                currentView = MenuView.FormalMode;
             }
         }
 
@@ -621,7 +699,7 @@ public class MainMenuController : MonoBehaviour
         {
             PlayClickSound();
 
-            currentView = MenuView.Login;
+            currentView = MenuView.FormalMode;
             message = "";
             CloseLoginErrorDialog();
         }
@@ -698,10 +776,10 @@ public class MainMenuController : MonoBehaviour
             pendingInputAction = null;
         }
 
-        if (GUILayout.Button("Back To Login", tertiaryButtonStyle, GUILayout.Height(36f)))
+        if (GUILayout.Button("Back To Home", tertiaryButtonStyle, GUILayout.Height(36f)))
         {
             PlayClickSound();
-            currentView = MenuView.Login;
+            currentView = MenuView.Home;
             pendingInputAction = null;
             message = "";
         }
@@ -716,10 +794,10 @@ public class MainMenuController : MonoBehaviour
         {
             GUILayout.Label("Demo video could not be loaded.", demoMessageStyle, GUILayout.Height(44f));
             GUILayout.Space(12f);
-            if (GUILayout.Button("Back To Login", tertiaryButtonStyle, GUILayout.Height(36f)))
+            if (GUILayout.Button("Back To Home", tertiaryButtonStyle, GUILayout.Height(36f)))
             {
                 PlayClickSound();
-                currentView = MenuView.Login;
+                currentView = MenuView.Home;
                 StopDemoVideo();
             }
 
@@ -758,10 +836,10 @@ public class MainMenuController : MonoBehaviour
             buttonHeight
         );
 
-        if (GUI.Button(backButtonRect, "Back To Login", tertiaryButtonStyle))
+        if (GUI.Button(backButtonRect, "Back To Home", tertiaryButtonStyle))
         {
             PlayClickSound();
-            currentView = MenuView.Login;
+            currentView = MenuView.Home;
             StopDemoVideo();
         }
     }
@@ -1061,7 +1139,10 @@ public class MainMenuController : MonoBehaviour
         subtitleStyle.fontSize = Screen.width < 820f ? 12 : 15;
         subtitleStyle.fontStyle = FontStyle.Bold;
         subtitleStyle.alignment = titleStyle.alignment;
-        subtitleStyle.normal.textColor = new Color(0.96f, 0.86f, 0.5f, 0.95f);
+        subtitleStyle.normal.textColor = new Color(1f, 0.98f, 0.9f, 0.98f);
+
+        subtitleShadowStyle = new GUIStyle(subtitleStyle);
+        subtitleShadowStyle.normal.textColor = new Color(0.05f, 0.14f, 0.06f, 0.82f);
 
         labelStyle = new GUIStyle(GUI.skin.label);
         labelStyle.font = Font.CreateDynamicFontFromOSFont(new string[] { "Verdana", "Arial" }, 15);
@@ -1605,8 +1686,14 @@ public class MainMenuController : MonoBehaviour
         GUI.color = Color.white;
         GUI.DrawTexture(new Rect(0f, 0f, Screen.width, Screen.height), screenShadeTexture, ScaleMode.StretchToFill);
 
-        GUI.color = new Color(1f, 0.92f, 0.42f, 0.2f);
-        GUI.DrawTexture(new Rect(Screen.width * 0.18f, Screen.height * 0.08f, Screen.width * 0.46f, Screen.height * 0.42f), titleGlowTexture, ScaleMode.StretchToFill);
+        float time = Time.realtimeSinceStartup;
+        float titleGlowPulse = 0.17f + Mathf.Sin(time * 0.7f) * 0.035f;
+        GUI.color = new Color(1f, 0.92f, 0.42f, titleGlowPulse);
+        GUI.DrawTexture(new Rect(Screen.width * 0.15f, Screen.height * 0.06f, Screen.width * 0.52f, Screen.height * 0.46f), titleGlowTexture, ScaleMode.StretchToFill);
+
+        float horizonPulse = 0.055f + Mathf.Sin(time * 0.42f + 1.7f) * 0.018f;
+        GUI.color = new Color(0.68f, 1f, 0.62f, horizonPulse);
+        GUI.DrawTexture(new Rect(Screen.width * -0.08f, Screen.height * 0.64f, Screen.width * 0.58f, Screen.height * 0.36f), titleGlowTexture, ScaleMode.StretchToFill);
         GUI.color = oldColor;
     }
 
@@ -1629,16 +1716,31 @@ public class MainMenuController : MonoBehaviour
             GUI.DrawTexture(new Rect(x, y, size, size), particleTexture, ScaleMode.StretchToFill);
         }
 
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 11; i++)
+        {
+            float seed = i * 71.53f;
+            float x = Mathf.Repeat(seed * 29f + time * (5.5f + i * 0.22f), Screen.width + 120f) - 60f;
+            float y = Screen.height * (0.18f + Mathf.Repeat(seed * 0.017f, 0.5f)) +
+                Mathf.Sin(time * 1.2f + seed) * 28f;
+            float size = 9f + Mathf.Repeat(seed, 5f);
+            float blink = Mathf.Pow(Mathf.Max(0f, Mathf.Sin(time * (1.4f + i * 0.07f) + seed)), 2f);
+
+            GUI.color = new Color(0.68f, 1f, 0.66f, 0.06f + blink * 0.2f);
+            GUI.DrawTexture(new Rect(x - size, y - size, size * 3f, size * 3f), titleGlowTexture, ScaleMode.StretchToFill);
+            GUI.color = new Color(1f, 0.98f, 0.72f, 0.25f + blink * 0.38f);
+            GUI.DrawTexture(new Rect(x, y, size, size), particleTexture, ScaleMode.StretchToFill);
+        }
+
+        for (int i = 0; i < 10; i++)
         {
             float seed = i * 53.91f;
-            float x = Mathf.Repeat(seed * 31f + time * (18f + i * 1.5f), Screen.width + 90f) - 45f;
-            float y = Screen.height * (0.18f + i * 0.08f) + Mathf.Sin(time * 0.9f + seed) * 18f;
-            float size = 13f + (i % 3) * 4f;
+            float x = Mathf.Repeat(seed * 31f + time * (16f + i * 1.25f), Screen.width + 120f) - 60f;
+            float y = Screen.height * (0.12f + Mathf.Repeat(i * 0.087f, 0.68f)) + Mathf.Sin(time * 0.9f + seed) * 24f;
+            float size = 12f + (i % 4) * 4f;
 
             GUI.matrix = oldMatrix;
-            GUIUtility.RotateAroundPivot(Mathf.Sin(time + seed) * 12f, new Vector2(x + size * 0.5f, y + size * 0.5f));
-            GUI.color = new Color(0.42f, 0.68f, 0.2f, 0.36f);
+            GUIUtility.RotateAroundPivot(Mathf.Sin(time * 1.25f + seed) * 18f, new Vector2(x + size * 0.5f, y + size * 0.5f));
+            GUI.color = new Color(0.42f, 0.68f, 0.2f, 0.24f + (i % 3) * 0.04f);
             GUI.DrawTexture(new Rect(x, y, size, size), leafTexture, ScaleMode.ScaleToFit);
         }
 
