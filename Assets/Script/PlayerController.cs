@@ -32,23 +32,7 @@ public class PlayerController : MonoBehaviour
     public float coyoteTime = 0.1f;
     private float coyoteTimer;
 
-    public Transform attackPoint;
-    public float attackRange = 1f;
-    public LayerMask enemyLayer;
-    public int attackDamage = 1;
-    public float attackKnockback = 6f;
-    public GameObject attackFxPrefab;
-    public float attackFxDuration = 0.2f;
-
     public float fallThreshold = -20f;
-
-    public int maxHealth = 3;
-    public float invincibleTime = 0.6f;
-    public float hitKnockback = 8f;
-
-    private int currentHealth;
-    private bool isInvincible = false;
-    private float invincibleTimer = 0f;
 
     [SerializeField] private SpriteRenderer spriteRenderer;
     [SerializeField] private Animator animator;
@@ -64,7 +48,6 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float dashVolume = 1f;
 
     private int facingDir = 1;
-    private Vector3 attackPointStartLocalPos;
 
     private HashSet<int> groundColliderIds = new HashSet<int>();
     private HashSet<Collider2D> ignoredGroundColliders = new HashSet<Collider2D>();
@@ -127,18 +110,14 @@ public class PlayerController : MonoBehaviour
 
         if (runAudioSource.clip == null)
             runAudioSource.clip = runClip;
-
-        if (attackPoint != null)
-            attackPointStartLocalPos = attackPoint.localPosition;
     }
 
     void Start()
     {
-        currentHealth = maxHealth;
         defaultGravityScale = rb.gravityScale;
     }
 
-    // Handles player input, movement, jump, dash, attack, animation state, and fall death.
+    // Handles player input, movement, jump, dash, animation state, and fall death.
     void Update()
     {
         if (isDead)
@@ -146,8 +125,6 @@ public class PlayerController : MonoBehaviour
 
         if (dashCooldownTimer > 0f)
             dashCooldownTimer -= Time.deltaTime;
-
-        UpdateInvincible();
 
         float move = PlayerInputConfig.GetHorizontalMove();
 
@@ -242,18 +219,13 @@ public class PlayerController : MonoBehaviour
                 EndDash();
         }
 
-        if (Input.GetMouseButtonDown(0))
-        {
-            Attack();
-        }
-
         if (transform.position.y < fallThreshold)
         {
             Die();
         }
     }
 
-    // Tracks ground contacts, resets jump/dash resources, and applies enemy collision damage.
+    // Tracks ground contacts and resets jump/dash resources.
     private void OnCollisionEnter2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Ground"))
@@ -298,14 +270,6 @@ public class PlayerController : MonoBehaviour
                     lastSpacecraftPosition = spacecraft.transform.position;
                 }
             }
-        }
-
-        if (collision.gameObject.CompareTag("Enemy"))
-        {
-            Vector2 hitDir =
-                (transform.position - collision.transform.position).normalized;
-
-            TakeDamage(1, hitDir * hitKnockback);
         }
     }
 
@@ -750,7 +714,7 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    // Updates the visual facing direction and mirrors the attack point.
+    // Updates the visual facing direction.
     void SetFacing(int dir)
     {
         if (dir == facingDir)
@@ -761,43 +725,6 @@ public class PlayerController : MonoBehaviour
         if (spriteRenderer != null)
         {
             spriteRenderer.flipX = facingDir < 0;
-        }
-
-        if (attackPoint != null)
-        {
-            Vector3 p = attackPointStartLocalPos;
-            p.x = Mathf.Abs(p.x) * facingDir;
-            attackPoint.localPosition = p;
-        }
-    }
-
-    // Updates invincibility timing and blink feedback after damage.
-    void UpdateInvincible()
-    {
-        if (!isInvincible)
-            return;
-
-        invincibleTimer -= Time.deltaTime;
-
-        float blink = Mathf.PingPong(Time.time * 12f, 1f);
-
-        if (spriteRenderer != null)
-        {
-            Color c = spriteRenderer.color;
-            c.a = Mathf.Lerp(0.35f, 1f, blink);
-            spriteRenderer.color = c;
-        }
-
-        if (invincibleTimer <= 0f)
-        {
-            isInvincible = false;
-
-            if (spriteRenderer != null)
-            {
-                Color c = spriteRenderer.color;
-                c.a = 1f;
-                spriteRenderer.color = c;
-            }
         }
     }
 
@@ -831,88 +758,6 @@ public class PlayerController : MonoBehaviour
         else if (runAudioSource.isPlaying)
         {
             runAudioSource.Stop();
-        }
-    }
-
-    // Performs a melee attack and applies damage to enemies inside the attack radius.
-    void Attack()
-    {
-        if (animator != null)
-        {
-            animator.SetTrigger("Attack");
-        }
-
-        if (attackFxPrefab != null && attackPoint != null)
-        {
-            GameObject fx = Instantiate(
-                attackFxPrefab,
-                attackPoint.position,
-                Quaternion.identity
-            );
-
-            Vector3 scale = fx.transform.localScale;
-
-            scale.x =
-                facingDir >= 0
-                ? Mathf.Abs(scale.x)
-                : -Mathf.Abs(scale.x);
-
-            fx.transform.localScale = scale;
-
-            Destroy(fx, attackFxDuration);
-        }
-
-        Collider2D[] hitEnemies =
-            Physics2D.OverlapCircleAll(
-                attackPoint.position,
-                attackRange,
-                enemyLayer
-            );
-
-        foreach (Collider2D enemy in hitEnemies)
-        {
-            EnemyPatrol patrol =
-                enemy.GetComponent<EnemyPatrol>();
-
-            if (patrol != null)
-            {
-                Vector2 dir =
-                    (enemy.transform.position - transform.position).normalized;
-
-                patrol.TakeDamage(
-                    attackDamage,
-                    dir * attackKnockback
-                );
-            }
-        }
-    }
-
-    // Applies player damage, knockback, invincibility, and death when health reaches zero.
-    void TakeDamage(int amount, Vector2 knockback)
-    {
-        rb.velocity = Vector2.zero;
-
-        rb.AddForce(
-            knockback,
-            ForceMode2D.Impulse
-        );
-
-        if (isInvincible)
-            return;
-
-        currentHealth -= amount;
-
-        isInvincible = true;
-        invincibleTimer = invincibleTime;
-
-        if (animator != null)
-        {
-            animator.SetTrigger("Hurt");
-        }
-
-        if (currentHealth <= 0)
-        {
-            Die();
         }
     }
 
@@ -997,17 +842,4 @@ public class PlayerController : MonoBehaviour
         Destroy(soundObject, deathClip.length + 0.1f);
     }
 
-    // Draws the melee attack radius in the editor.
-    void OnDrawGizmosSelected()
-    {
-        if (attackPoint == null)
-            return;
-
-        Gizmos.color = Color.red;
-
-        Gizmos.DrawWireSphere(
-            attackPoint.position,
-            attackRange
-        );
-    }
 }

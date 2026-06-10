@@ -10,6 +10,7 @@ public class Coin : MonoBehaviour
         if (collision.CompareTag("Player"))
         {
             Debug.Log("Get Coins: " + value);
+            CoinPickupAudio.Play();
             Destroy(gameObject);
         }
     }

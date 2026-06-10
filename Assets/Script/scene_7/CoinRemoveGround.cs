@@ -9,6 +9,8 @@ public class CoinRemoveGround : MonoBehaviour
     {
         if (other.CompareTag("Player"))
         {
+            CoinPickupAudio.Play();
+
             if (groundToRemove != null)
             {
                 groundToRemove.SetActive(false);

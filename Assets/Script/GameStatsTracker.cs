@@ -492,42 +492,42 @@ public class GameStatsTracker : MonoBehaviour
             return 1;
         }
 
-        if (scene.name == "Hurdle2" || scene.name == "2.MovingSpike" || scene.buildIndex == 2 || scene.buildIndex == 3)
+        if (scene.name == "2.MovingSpike" || scene.buildIndex == 2)
         {
             return 2;
         }
 
-        if (scene.name == "3.3MovingSpkies" || scene.buildIndex == 4)
+        if (scene.name == "3.3MovingSpkies" || scene.buildIndex == 3)
         {
             return 3;
         }
 
-        if (scene.name == "4.2MovingSpikes" || scene.buildIndex == 5)
+        if (scene.name == "4.2MovingSpikes" || scene.buildIndex == 4)
         {
             return 4;
         }
 
-        if (scene.name == "5.ChasingSpikes" || scene.buildIndex == 6)
+        if (scene.name == "5.ChasingSpikes" || scene.buildIndex == 5)
         {
             return 5;
         }
 
-        if (scene.name == "6.Coin" || scene.buildIndex == 7)
+        if (scene.name == "6.Coin" || scene.buildIndex == 6)
         {
             return 6;
         }
 
-        if (scene.name == "7.TrapCoin" || scene.buildIndex == 8)
+        if (scene.name == "7.TrapCoin" || scene.buildIndex == 7)
         {
             return 7;
         }
 
-        if (scene.name == "8.maze" || scene.buildIndex == 9)
+        if (scene.name == "8.maze" || scene.buildIndex == 8)
         {
             return 8;
         }
 
-        if (scene.name == "9.FreeFalling" || scene.buildIndex == 10)
+        if (scene.name == "9.FreeFalling" || scene.buildIndex == 9)
         {
             return 9;
         }

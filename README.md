@@ -75,7 +75,7 @@ The smallest playable version of this project is a single level where the player
 | Level | Scene | Focus |
 | --- | --- | --- |
 | 1 | `1.Beginning` | Falling traps and unstable ground |
-| 2 | `2.MovingSpike` / `Hurdle2` | Spike avoidance |
+| 2 | `2.MovingSpike` | Spike avoidance |
 | 3 | `3.3MovingSpkies` | Moving spike timing |
 | 4 | `4.2MovingSpikes` | Platform timing and spike pressure |
 | 5 | `5.ChasingSpikes` | Dash usage against chasing hazards |
@@ -169,6 +169,7 @@ This section lists third-party assets and generated/custom assets used by the pr
 | `death.mp3` | Player death sound | Death, Pixabay: <https://pixabay.com/sound-effects/film-special-effects-death-408455/> |
 | `esclate.mp3` | Scene transition sound | Escalator, Pixabay: <https://pixabay.com/sound-effects/city-escalator-71671/> |
 | `cadidate_1.mp3` | Main menu background music | Pixabay BGM candidate; original source link should be added before public release |
+| `coin_pickup.ogg` | Coin pickup sound | Casino Audio by Kenney, CC0: <https://kenney.nl/assets/casino-audio> |
 
 ### Video
 

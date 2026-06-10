@@ -1602,7 +1602,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a7724bbad44984e4c87d27349784bf18, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  nextSceneIndex: 6
+  nextSceneIndex: 5
 --- !u!212 &1138604961
 SpriteRenderer:
   m_ObjectHideFlags: 0

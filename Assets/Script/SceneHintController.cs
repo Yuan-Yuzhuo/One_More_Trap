@@ -96,27 +96,27 @@ public class SceneHintController : MonoBehaviour
             return "Watch for falling traps and unstable ground.";
         }
 
-        if (sceneName == "Hurdle2" || sceneName == "2.MovingSpike" || buildIndex == 2 || buildIndex == 3)
+        if (sceneName == "2.MovingSpike" || buildIndex == 2)
         {
             return "Spikes are lethal. Dodge them.";
         }
 
-        if (sceneName == "5.ChasingSpikes" || buildIndex == 6)
+        if (sceneName == "5.ChasingSpikes" || buildIndex == 5)
         {
             return "Use your dash wisely to stay ahead of the chasing spikes.";
         }
 
-        if (sceneName == "7.TrapCoin" || buildIndex == 8)
+        if (sceneName == "7.TrapCoin" || buildIndex == 7)
         {
             return "Greed can sometimes lead to ruin.";
         }
 
-        if (sceneName == "8.maze" || buildIndex == 9)
+        if (sceneName == "8.maze" || buildIndex == 8)
         {
             return "You are now entering the space station.";
         }
 
-        if (sceneName == "9.FreeFalling" || buildIndex == 10)
+        if (sceneName == "9.FreeFalling" || buildIndex == 9)
         {
             return "Be careful: inertia will affect your movement. Watch out for the red lines; they are lethal.";
         }
