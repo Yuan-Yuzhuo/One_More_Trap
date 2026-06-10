@@ -164,6 +164,7 @@ This section lists third-party assets and generated/custom assets used by the pr
 | --- | --- | --- |
 | `click.mp3` | Main menu click feedback | Mouse Click, Pixabay: <https://pixabay.com/sound-effects/film-special-effects-computer-mouse-click-352734/> |
 | `run.mp3` | Player run loop | Run, Pixabay: <https://pixabay.com/sound-effects/nature-run-142540/> |
+| `coin_pickup.mp3` | Player pick up the coin | Casino Audio by Kenney, CC0: <https://kenney.nl/assets/casino-audio> |
 | `jump.mp3` | Player jump sound | Funny Spring Jump, Pixabay: <https://pixabay.com/sound-effects/film-special-effects-funny-spring-jump-140378/> |
 | `whoosh.mp3` | Player dash sound | Whoosh Cinematic, Pixabay: <https://pixabay.com/sound-effects/film-special-effects-whoosh-cinematic-376875/> |
 | `death.mp3` | Player death sound | Death, Pixabay: <https://pixabay.com/sound-effects/film-special-effects-death-408455/> |
